@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class touchLocation
+public class TouchLocation
 {
     public int touchId;
     public GameObject circle;
 
-    public touchLocation(int newTouchId, GameObject newCircle)
+    public TouchLocation(int newTouchId, GameObject newCircle)
     {
         touchId = newTouchId;
         circle = newCircle;

@@ -31,7 +31,7 @@ public class MNGR_PlayerLife : MonoBehaviour
     }
 
     [System.Serializable]
-    public class PlayerTakeDamageVariable3s
+    public class PlayerTakeDamageVariables
     {
         public float damageTimer;
         public float invulnerableTimer;
@@ -48,7 +48,7 @@ public class MNGR_PlayerLife : MonoBehaviour
     public PlayerLifeVariables playerLifeVars;
 
     [Header("Player Take Damage Variables")]
-    public PlayerTakeDamageVariable3s playerDmgVariables;
+    public PlayerTakeDamageVariables playerDmgVariables;
 
     [Header("Player Respawn Variables")]
     public PlayerRespawnVariables playerRespawnVars;
@@ -125,16 +125,13 @@ public class MNGR_PlayerLife : MonoBehaviour
         yield return null;
     }
 
-    private void OnCollisionStay2D(Collision2D collision)
+    private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.tag == "Enemy" && !playerDmgVariables.invulnerable)
+        if (collision.gameObject.tag == "Enemy" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
             playerLoseLife();
         }
-    }
 
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
         if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
             playerLoseLife();

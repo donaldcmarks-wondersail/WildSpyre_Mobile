@@ -30,16 +30,16 @@ public class Damager : MonoBehaviour
     {
         if (_requireDownwardMovement)
         {
-            if (reactorTransformRB.velocity.y < 0)
+            if (reactorTransformRB.linearVelocity.y < 0)
             {
-                _playerCtrl.GiveDamageReaction(Vector3.up*damagerReactForce, _damagerReactTime, damagerReactForce);;
+                _playerCtrl.GiveDamageReaction(Vector3.up*damagerReactForce, _damagerReactTime, damagerReactForce);
                 reactorTransformRB.AddForce(transform.up * damagerReactForce);
                 _animator.SetTrigger("Jump");
             }
         }
         else
         {
-            _playerCtrl.GiveDamageReaction(Vector3.up*damagerReactForce, _damagerReactTime, damagerReactForce);;
+            _playerCtrl.GiveDamageReaction(Vector3.up*damagerReactForce, _damagerReactTime, damagerReactForce);
             reactorTransformRB.AddForce(transform.up * damagerReactForce);
             _animator.SetTrigger("Jump");
         }

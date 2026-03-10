@@ -384,7 +384,7 @@ public class Util_Trajectory : MonoBehaviour
 
     [Header("Ref")]
 
-    [SerializeField] public LineRenderer lineRendere = null;
+    [SerializeField] public LineRenderer lineRenderer = null;
 
 
 
@@ -570,9 +570,9 @@ public class Util_Trajectory : MonoBehaviour
 
             Calculate_Trajectory(this.transform.position);
 
-            lineRendere.positionCount = splits;
+            lineRenderer.positionCount = splits;
 
-            lineRendere.SetPositions(pathVertList.ToArray());
+            lineRenderer.SetPositions(pathVertList.ToArray());
 
         }
 
@@ -622,218 +622,11 @@ public class Util_Trajectory : MonoBehaviour
 
     public void resetLineRendPositions()
     {
-        for (int i = 0; i < lineRendere.positionCount; i++)
+        for (int i = 0; i < lineRenderer.positionCount; i++)
         {
-            lineRendere.SetPosition(i, Vector3.zero);
+            lineRenderer.SetPosition(i, Vector3.zero);
         }
     }
-
-
-    //private void OnDrawGizmosSelected()
-
-    //{
-
-    //    if (magChange != launchMagnitude)
-
-    //    {
-
-    //        if (calc_SuitalbeMagAng)
-
-    //        {
-
-    //            float x = (target.position.x - transform.position.x);
-
-    //            float y = (target.position.y - transform.position.y);
-
-    //            float g = -acceleration.y;
-
-    //            float newAng = Angle_ToReachXY_InGravity_AtMagnitude(x, y, g, launchMagnitude);
-
-    //            if (float.IsNaN(newAng))
-
-    //            {
-
-    //                launchMagnitude = magChange;
-
-    //            }
-
-    //            else
-
-    //            {
-
-    //                magChange = launchMagnitude;
-
-    //                launchAngle = newAng;
-
-    //                velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //                velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //            }
-
-    //        }
-
-    //        else
-
-    //        {
-
-    //            magChange = launchMagnitude;
-
-    //            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //        }
-
-    //    }
-
-
-
-    //    if (angChange != launchAngle)
-
-    //    {
-
-    //        if (calc_SuitalbeMagAng)
-
-    //        {
-
-    //            float x = (target.position.x - transform.position.x);
-
-    //            float y = (target.position.y - transform.position.y);
-
-    //            float g = -acceleration.y;
-
-    //            float newMag = Magnitude_ToReachXY_InGravity_AtAngle(x, y, g, launchAngle);
-
-    //            if (float.IsNaN(newMag))
-
-    //            {
-
-    //                launchAngle = angChange;
-
-    //            }
-
-    //            else
-
-    //            {
-
-    //                angChange = launchAngle;
-
-    //                launchMagnitude = newMag;
-
-    //                velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //                velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //            }
-
-    //        }
-
-    //        else
-
-    //        {
-
-    //            angChange = launchAngle;
-
-    //            velocity.x = Mathf.Cos(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //            velocity.y = Mathf.Sin(launchAngle * Mathf.Deg2Rad) * launchMagnitude;
-
-    //        }
-
-    //    }
-
-
-
-    //    if (velChange != velocity)
-
-    //    {
-
-    //        velChange = velocity;
-
-    //        launchMagnitude = velocity.magnitude;
-
-    //        launchAngle = Vector3.SignedAngle(Vector3.right, velocity, Vector3.forward);
-
-    //    }
-
-
-
-    //    time = Mathf.Max(0.001f, time);
-
-    //    dotCount = Mathf.Max(0, dotCount);
-
-    //    dotTimeSpace = Mathf.Max(0.001f, dotTimeSpace);
-
-    //    dotDistSpace = Mathf.Max(0.001f, dotDistSpace);
-
-    //    dotCalcTimeStep = Mathf.Max(0.001f, dotCalcTimeStep);
-
-    //    splits = Mathf.Max(2, splits);
-
-
-
-    //    if (calc_Trajectory)
-
-    //    {
-
-    //        if (!auto_calc)
-
-    //            calc_Trajectory = false;
-
-    //        Calculate_Trajectory(this.transform.position);
-
-    //        lineRendere.positionCount = splits;
-
-    //        lineRendere.SetPositions(pathVertList.ToArray());
-
-    //    }
-
-
-
-    //    if (calc_Velocity)
-
-    //    {
-
-    //        if (!auto_calc)
-
-    //            calc_Velocity = false;
-
-    //        Calculate_Velocity(target.transform.position);
-
-    //    }
-
-
-
-    //    if (calc_Dots)
-
-    //    {
-
-    //        if (!auto_calc)
-
-    //            calc_Dots = false;
-
-    //        Calculate_Dots();
-
-    //    }
-
-
-
-    //    if (fire)
-
-    //    {
-
-    //        fire = false;
-
-    //        projectile.transform.position = transform.position;
-
-    //        projectile.velocity = velocity + unityAccuracyFix;
-
-    //    }
-
-    //}
-
-
 
     private void OnDrawGizmos()
 

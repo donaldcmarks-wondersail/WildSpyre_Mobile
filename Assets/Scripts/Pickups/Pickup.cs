@@ -31,7 +31,7 @@ public class Pickup : MonoBehaviour
         // Optional: Base implementation for derived classes
     }
 
-    protected virtual void OnTriggerEnter2D(Collider other)
+    protected virtual void OnTriggerEnter2D(Collider2D other)
     {
         
     }

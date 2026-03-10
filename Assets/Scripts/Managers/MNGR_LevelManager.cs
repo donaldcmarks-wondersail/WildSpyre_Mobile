@@ -67,7 +67,7 @@ public class MNGR_LevelManager : Singleton<MNGR_LevelManager>
     [Header("Game Lose Variables")]
     public gamePauseVariables gamePauseVars;
 
-    [Header("Yser Interface Variables")]
+    [Header("User Interface Variables")]
     public UIVariables UIVars;
 
     // Start is called before the first frame update

@@ -175,7 +175,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
     [Header("Sprite Prototype Visuals")]
     public SpriteProtoVisuals spriteProtoVis;
 
-    [Header("Sprite Prototype Visuals")]
+    [Header("Trail Prototype Visuals")]
     public TrailVariables trailVars;
 
     [Header("Player State Variables")]
@@ -559,7 +559,6 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
                     getPlatformInput();
                     break;
                 case playerControlState.Sling:
-                    getSlingInput();
                     break;
                 case playerControlState.OnLedge:
                     getPlatformInput();
@@ -644,7 +643,6 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
 
     private IEnumerator ExecuteSkidCO()
     {
-        Debug.Log("Skid Coroutine Started");
         skidVars.isSkidding = true;
         float skidStartTime = Time.time;
         animatorChar.SetBool("isSkidding", true);
@@ -652,7 +650,6 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         while (Time.time < (skidStartTime + skidVars.skidTime))
         {
             rb.linearVelocity = new Vector2(Mathf.Lerp(startXVel, 0.0f, skidVars.skidCurve.Evaluate((Time.time - skidStartTime) / skidVars.skidTime)), rb.linearVelocity.y);
-            Debug.Log("Still in Skid Coroutine: Value  = " +(Time.time - skidStartTime) / skidVars.skidTime);
             yield return null;
         }
         rb.linearVelocity = new Vector2(0.0f, rb.linearVelocity.y);
@@ -660,11 +657,6 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         skidVars.isSkidding = false;
         skidVars.runResetTime = Time.time;
         yield return null;
-    }
-    
-    public void getSlingInput()
-    {
-
     }
     
     public void jump()
@@ -1099,15 +1091,13 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
     public IEnumerator GiveDamageReactionCO(Vector2 direction, float reactionTime, float reactForce)
     {
         resetPlayerPhysics();
-        
+        float startTime = Time.time;
         rb.isKinematic = false;
         inputVars.lockInput = true;
         
         rb.AddForce(direction.normalized*reactForce, ForceMode2D.Impulse );
         
-        float t = 0f;
-        
-        while (t < reactionTime)
+        while (Time.time < (startTime + reactionTime))
         {
             yield return null;
         }
@@ -1249,7 +1239,6 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
                 case playerControlState.TakeDamage:
                     animatorChar.SetBool("isBall", false);
                     animatorChar.SetTrigger("TakeDamage");
-                    print("Player should take damage animation");
                     break;
                 case playerControlState.Dead:
                     break;

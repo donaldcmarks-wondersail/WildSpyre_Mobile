@@ -21,25 +21,19 @@ public class INPT_TouchManager : MonoBehaviour
     
     [Header("Swipe Variables")]
     public Vector2 swipeAreaSize;
-    private Vector2 swipeAreaSizeCalc;
     public float swipeThreshold;
     public float swipeMax;
     private float swipeValCalc;
     public Color swipeColor;
-    private Touch curSwipeTouch;
-    private Vector2 startPos;
     [HideInInspector] public Vector2 direction;
-    public bool isTouchedZone = false;
     public bool isSwipe = false;
     public float aimMaxMagnitude;
-    private float slingForceCalc;
 
     [Header("Aim Visualization Variables")]
     public GameObject aimReticle;
     private Quaternion aimReticleRot;
     private Quaternion aimReticleRotNegative;
     private SpriteRenderer aimReticleSpriteRend;
-    private Vector3 aimReticleScale;
     public float aimReticleScaleMax;
     public Color aimReticleColorStart;
     public Color aimReticleColorFaded;
@@ -69,10 +63,7 @@ public class INPT_TouchManager : MonoBehaviour
 
     private Vector3[] aimLinePos = new Vector3[2];
 
-    [Header("MultiTouch Variables")]
-    public GameObject circle;
-    public List<touchLocation> touches = new List<touchLocation>();
-    public int swipeFingerID = -1;
+    private Vector3 _lastCamPosition;
     
     // Start is called before the first frame update
     void Start()
@@ -81,7 +72,6 @@ public class INPT_TouchManager : MonoBehaviour
         LRMaterial.color = Color.yellow;
         aimLinePos[0] = aimLine.gameObject.transform.position;
         swipeAreaImage.color = Color.yellow;
-        swipeAreaSizeCalc = swipeAreaSize;
         initializeSwipeArea();
         cam.farClipPlane = 2001.0f;
         aimReticleSpriteRend = aimReticle.GetComponent<SpriteRenderer>();
@@ -90,10 +80,13 @@ public class INPT_TouchManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        initializeSwipeArea();
+        if (cam.transform.position != _lastCamPosition)
+        {
+            initializeSwipeArea();
+            _lastCamPosition = cam.transform.position;
+        }
         if (playerCtrl.PlayerState != CTRL_PlayerPlatformer.playerControlState.Dead && playerCtrl.PlayerState != CTRL_PlayerPlatformer.playerControlState.LevelComplete)
         {
-            //evaluateSwipeArea();
             evaluateJoystick();
         }
 
@@ -101,30 +94,6 @@ public class INPT_TouchManager : MonoBehaviour
         if (isSwipe)
         {
             drawAimLine();
-        }
-    }
-
-    private void parseSwipeAreaBegin(Touch touch)
-    {
-        if (touch.position.x > swipeLimit_BotLeft.x && touch.position.x < swipeLimit_BotRight.x && touch.position.y < swipeLimit_TopLeft.y && touch.position.y > swipeLimit_BotRight.y)
-        {
-            curSwipeTouch = touch;
-            Debug.Log("curSwipeTouch fingerID = " + curSwipeTouch.fingerId);
-            isTouchedZone = true;
-            LRMaterial.color = Color.red;
-            swipeAreaImage.color = Color.red;
-            swipeFingerID = touch.fingerId;
-            startPos = touch.position;
-            
-            switch (playerCtrl.PlayerState)
-            {
-                case CTRL_PlayerPlatformer.playerControlState.Platformer:
-                    playerCtrl.jump();
-                    break;
-                case CTRL_PlayerPlatformer.playerControlState.Sling:
-                    //playerCtrl.setStatePlatform();
-                    break;
-            }
         }
     }
 
@@ -140,58 +109,6 @@ public class INPT_TouchManager : MonoBehaviour
         }
     }
     
-    // Checks if a touch exists within the defined Swipe Area
-    private void evaluateSwipeArea()
-    {
-        int j = 0;
-        while (j < Input.touchCount)
-        {
-            Touch t = Input.GetTouch(j);
-            if (t.phase == TouchPhase.Began)
-            {
-                touches.Add(new touchLocation(t.fingerId, createCircle(t)));
-                parseSwipeAreaBegin(t);
-            }
-            else if (t.phase == TouchPhase.Ended)
-            {
-                touchLocation thisTouch = touches.Find(touchLocation => touchLocation.touchId == t.fingerId);
-
-                if (t.fingerId == swipeFingerID)
-                {
-                    Debug.Log("Swiper FingerID Lifted");
-                    swipeFingerID = -1;
-                    LRMaterial.color = Color.yellow;
-                    swipeAreaImage.color = Color.yellow;
-                    aimLine.material.color = Color.yellow;
-
-                    ExecuteSling(direction);
-                }
-                
-                Destroy(thisTouch.circle);
-
-                touches.RemoveAt(touches.IndexOf(thisTouch));
-
-            }
-            else if (t.phase == TouchPhase.Moved)
-            {
-                if (t.fingerId == swipeFingerID)
-                {
-                    direction = t.position - startPos;
-                    
-                    //Debug.Log("Swipe Direction Magnitude = " + direction.magnitude);
-
-                    CheckForSling(direction);
-
-                }
-
-                touchLocation thisTouch = touches.Find(touchLocation => touchLocation.touchId == t.fingerId);
-                thisTouch.circle.transform.position = getTouchPosition(t.position);
-            }
-            ++j;
-        }
-
-        drawSwipeArea();
-    }
 
     private void CheckForSling(Vector2 aimDirection)
     {
@@ -263,7 +180,7 @@ public class INPT_TouchManager : MonoBehaviour
         trajectory.Calculate_Trajectory(this.transform.position);
         trajectory.drawTrajectory();
 
-        trajectory.lineRendere.enabled = false;
+        trajectory.lineRenderer.enabled = false;
 
         direction = Vector2.zero;
     }
@@ -272,14 +189,10 @@ public class INPT_TouchManager : MonoBehaviour
     {
         swipeValCalc = direction.magnitude / swipeMax;
 
-        slingForceCalc = Mathf.Lerp(playerCtrl.slingVars.slingForceMin, playerCtrl.slingVars.slingForceMax, swipeValCalc);
-
         if (swipeValCalc > 1.0f)
         {
             swipeValCalc = 1.0f;
         }
-
-        Debug.Log("swipeValCalc = " + swipeValCalc);
 
         playerCtrl.slingVars.slingForce = Mathf.Lerp(playerCtrl.slingVars.slingForceMin, playerCtrl.slingVars.slingForceMax, swipeValCalc);
     }
@@ -355,11 +268,6 @@ public class INPT_TouchManager : MonoBehaviour
         LR04.SetPositions(LR04pos);
     }
 
-    private void drawAimGizmo(Vector2 startPos, Vector2 direction)
-    {
-        Debug.DrawLine(new Vector3(startPos.x, startPos.y, 0.0f), new Vector3(startPos.x, startPos.y, 0.0f) + new Vector3(direction.x, direction.y, 0.0f), Color.yellow);
-    }
-
     // Gizmo Stuff
     private void OnDrawGizmosSelected()
     {
@@ -367,19 +275,6 @@ public class INPT_TouchManager : MonoBehaviour
         drawSwipeArea();
     }
     
-    Vector2 getTouchPosition(Vector2 touchPosition)
-    {
-        return cam.ScreenToWorldPoint(new Vector3(touchPosition.x, touchPosition.y, transform.position.z));
-    }
-
-    GameObject createCircle(Touch t)
-    {
-        GameObject c = Instantiate(circle) as GameObject;
-        c.name = "Touch" + t.fingerId;
-        c.transform.position = getTouchPosition(t.position);
-        return c;
-    }
-
     public void calculateTrajectory()
     {
         trajectory.velocity = ((-direction.normalized * playerCtrl.slingVars.slingForce * trajectoryMagnitudeMultiplier));
@@ -387,7 +282,7 @@ public class INPT_TouchManager : MonoBehaviour
         trajectory.drawTrajectory();
 
 
-        trajectory.lineRendere.enabled = true;
+        trajectory.lineRenderer.enabled = true;
     }
 
 }
