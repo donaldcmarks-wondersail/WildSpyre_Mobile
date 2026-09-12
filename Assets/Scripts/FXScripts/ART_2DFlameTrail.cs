@@ -228,7 +228,10 @@ public class ART_2DFlameTrail : MonoBehaviour
 
         Vector3 velocityNormalized = playerCtrl.rb.linearVelocity.normalized;
         Vector3 curFacingDir = Vector3.zero;
-        Vector3 animOverrideDirTarget = transform.position + ((facingDirectionStart + animOverrideDirection).normalized * (offset * (float)trailResolution));
+        // Direction only — NOT transform.position + ... — since facingDirection is
+        // always consumed as a direction. Adding the world position made the trail
+        // skew with the character's distance from world origin.
+        Vector3 animOverrideDirTarget = (facingDirectionStart + animOverrideDirection).normalized * (offset * (float)trailResolution);
         if (!playerCtrl.Flipped)
         {
             curFacingDir = facingDirectionStart;            

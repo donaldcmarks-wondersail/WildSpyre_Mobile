@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d547e4be7b123340a3c722c5bc85981, type: 3}
+  m_Name: EP_Grounded_Basic
+  m_EditorClassIdentifier: 
+  behavior: {fileID: 11400000, guid: 7baff3ce259d5924793abf49d3eb8cf0, type: 2}
+  movement: {fileID: 11400000, guid: bcc6fcf5121d7cb46a6e1a94a67dc5ad, type: 2}
+  stats: {fileID: 11400000, guid: 86f7e0061827cb54eb315a5454e20d44, type: 2}
+  abilitySet: {fileID: 11400000, guid: ca6f4e3617f57cb4b8213a3d4b1a69f6, type: 2}
