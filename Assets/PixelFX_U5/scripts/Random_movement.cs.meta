@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2ac963fe7c9766644a40829f59b56f8c
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 41545
+  packageName: Pixel FX
+  packageVersion: 1.0
+  assetPath: Assets/PixelFX_U5/scripts/Random_movement.cs
+  uploadId: 72167

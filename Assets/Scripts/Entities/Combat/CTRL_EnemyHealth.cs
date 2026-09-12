@@ -9,8 +9,11 @@ using UnityEngine.Events;
 ///   - Listens on the "PlayerDmg" layer (10) via OnTriggerEnter2D.
 ///   - If the incoming collider has a Damager component, reads its damage value
 ///     and triggers its DamagerReaction() so the player gets the stomp bounce-back.
+///
+/// Also implements IFireDamageable for sustained fire sources (e.g. the player's
+/// ground fire trail) — see ApplyBurnTick for how that differs from TakeDamage.
 /// </summary>
-public class CTRL_EnemyHealth : MonoBehaviour
+public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
 {
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int _currentHP;
@@ -62,18 +65,7 @@ public class CTRL_EnemyHealth : MonoBehaviour
     public void TakeDamage(int amount, Vector2 knockbackDir)
     {
         if (_isInvulnerable || IsDead) return;
-
-        _currentHP -= amount;
-        onDamaged?.Invoke();
-
-        if (_stats.hitParticlesPrefab != null)
-            Instantiate(_stats.hitParticlesPrefab, transform.position, Quaternion.identity);
-
-        if (_currentHP <= 0)
-        {
-            Die();
-            return;
-        }
+        if (ReduceHP(amount)) return;   // died
 
         // Apply knockback impulse
         Vector2 knockback = new Vector2(
@@ -86,7 +78,43 @@ public class CTRL_EnemyHealth : MonoBehaviour
         StartCoroutine(InvulnerabilityWindowCO());
     }
 
+    /// <summary>
+    /// IFireDamageable — a damage-over-time tick from a sustained fire source. Unlike
+    /// TakeDamage this never applies knockback and never starts the hit-invulnerability
+    /// window itself (an existing one is still respected, so fire can't hurt an enemy
+    /// mid-hitstun), so it can be called repeatedly without fighting the melee/stomp
+    /// hit-reaction tuning.
+    /// </summary>
+    public void ApplyBurnTick(int amount)
+    {
+        if (_isInvulnerable || IsDead) return;
+        ReduceHP(amount);
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
+    /// <summary>
+    /// Shared HP-reduction path for every damage source: lowers HP, fires onDamaged,
+    /// spawns hit particles, and kills the enemy at 0. Returns true if this reduction
+    /// killed the enemy, so callers can skip hit-reaction effects (knockback, i-frames)
+    /// that don't make sense on a corpse.
+    /// </summary>
+    private bool ReduceHP(int amount)
+    {
+        _currentHP -= amount;
+        onDamaged?.Invoke();
+
+        if (_stats.hitParticlesPrefab != null)
+            Instantiate(_stats.hitParticlesPrefab, transform.position, Quaternion.identity);
+
+        if (_currentHP <= 0)
+        {
+            Die();
+            return true;
+        }
+
+        return false;
+    }
+
     private void Die()
     {
         onDeath?.Invoke();

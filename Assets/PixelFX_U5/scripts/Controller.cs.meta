@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 85a2dee872ba0ff44852d19bd2a2de9d
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 41545
+  packageName: Pixel FX
+  packageVersion: 1.0
+  assetPath: Assets/PixelFX_U5/scripts/Controller.cs
+  uploadId: 72167
