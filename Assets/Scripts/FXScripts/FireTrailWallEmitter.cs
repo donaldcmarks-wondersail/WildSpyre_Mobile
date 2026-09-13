@@ -1,14 +1,19 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Wall-hang counterpart to FireTrailEmitter — same framework, different trigger and
-/// probe direction. Lives on the player and decides WHEN and WHERE the wall fire trail
-/// places a stamp: active for the entire duration of groundCheck.isWallHanging,
-/// including the very first instant the player grabs the wall (before any downward
-/// slide has actually started) — there's no minimum-speed gate here, unlike the
-/// ground emitter, because "just grabbed, not sliding yet" is explicitly part of what
-/// should show fire.
+/// Wall-hang counterpart to FireTrailEmitter — same framework (FireTrailEmitterBase),
+/// different trigger and probe direction. Lives on the player and decides WHEN and
+/// WHERE the wall fire trail places a stamp: active for the entire duration of
+/// groundCheck.isWallHanging, including the very first instant the player grabs the
+/// wall (before any downward slide has actually started) — there's no minimum-speed
+/// gate here, unlike the ground emitter, because "just grabbed, not sliding yet" is
+/// explicitly part of what should show fire. Also stays active through
+/// PlayerState.OnLedge — the scripted climb-over-the-corner state a wall-hang
+/// transitions into — so the trail doesn't cut out right as the climb begins. Unlike
+/// the continuous wall-slide case, OnLedge places exactly one stamp, right when the
+/// climb is *initiated* — the player's position is held static for the whole climb
+/// (CTRL_PlayerPlatformer snaps it to ledgePos1/ledgePos2 rather than moving it), so
+/// there's nothing to space further stamps out along even if it kept trying.
 ///
 /// Reuses FireTrailController/FireTrailCell completely unchanged — they only ever
 /// deal in a world point + surface normal and don't know or care whether that surface
@@ -19,80 +24,35 @@ using UnityEngine;
 /// Runs its own, entirely independent controller pool — a wall-hang trail and a
 /// ground trail can be burning simultaneously without interacting.
 /// </summary>
-public class FireTrailWallEmitter : MonoBehaviour
+public class FireTrailWallEmitter : FireTrailEmitterBase
 {
-    [Header("References")]
-    [SerializeField] private CTRL_PlayerPlatformer _playerCtrl;
-    [SerializeField] private CapsuleCollider2D _playerCollider;
-    [Tooltip("FireTrailController prefab used for wall-hang trails (can be the same script as the ground trail's, on a separately-tuned prefab). Must be ACTIVE by default so its own cell-pool builds at load time instead of hitching on first use.")]
-    [SerializeField] private FireTrailController _controllerPrefab;
-
-    [Header("Spawn")]
-    [Tooltip("World units the player must slide down the wall before the next stamp.")]
-    [SerializeField] private float _spawnInterval = 0.25f;
-
     [Header("Wall Probe")]
-    [Tooltip("Layers considered wall surface when placing a stamp. Falls back to the player's own ground mask if left as Nothing.")]
-    [SerializeField] private LayerMask _groundMask;
     [SerializeField] private float _wallProbeDistance = 0.5f;
     [SerializeField] private float _wallProbeSkin = 0.05f;
 
-    [Header("Controller Pool")]
-    [Tooltip("How many separate wall-hang trail runs can be alive/burning at once before the oldest is force-extinguished to make room.")]
-    [SerializeField] private int _maxPooledControllers = 4;
+    private bool _wasOnLedge;
 
-    [Header("Particles")]
-    [Tooltip("Particle system for the wall trail's ember/spark effect. Auto-found among children if left unassigned.")]
-    [SerializeField] private ParticleSystem _particleSystem;
-    [Tooltip("Emission rate (particles/sec) while wall-hanging. Forced to 0 the rest of the time.")]
-    [SerializeField] private float _maxEmission = 20f;
-
-    private readonly Queue<FireTrailController> _available = new Queue<FireTrailController>();
-    private readonly List<FireTrailController> _checkedOut = new List<FireTrailController>();
-
-    private FireTrailController _currentController;
-    private Vector2 _lastSpawnPos;
-    private bool _hasLastSpawn;
-
-    private void Awake()
+    protected override Vector3 GetPoolParkPosition(int index)
     {
-        if (_particleSystem == null) _particleSystem = GetComponentInChildren<ParticleSystem>(includeInactive: true);
-        if (_particleSystem != null)
-        {
-            _particleSystem.Play();
-            SetEmitting(false);
-        }
-
-        if (_maxPooledControllers < 1)
-        {
-            Debug.LogWarning($"[FireTrailWallEmitter] Max Pooled Controllers was {_maxPooledControllers} — clamping to 1.", this);
-            _maxPooledControllers = 1;
-        }
-
-        for (int i = 0; i < _maxPooledControllers; i++)
-        {
-            FireTrailController controller = Instantiate(_controllerPrefab);
-            // Parked well away from play so an idle pooled controller's own (inactive)
-            // cell pool doesn't visually sit on top of real level geometry. Offset from
-            // the ground emitter's parking spot too, so the two pools never overlap.
-            controller.transform.position = new Vector3(1000f, -10000f - i * 5f, 0f);
-            controller.gameObject.SetActive(false);
-            _available.Enqueue(controller);
-        }
-    }
-
-    private void Start()
-    {
-        if (_groundMask.value == 0)
-            _groundMask = _playerCtrl.groundCheck.groundMask;
+        // Offset from the ground emitter's parking spot so the two idle pools never
+        // overlap in the Scene view.
+        return new Vector3(1000f, -10000f - index * 5f, 0f);
     }
 
     private void Update()
     {
-        bool wallHanging = _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.Platformer
-                         && _playerCtrl.groundCheck.isWallHanging;
+        // isWallHanging is only maintained by CheckSurroundings, which the
+        // FixedUpdate switch only calls in the Platformer case — during OnLedge it's
+        // simply left stale-true, so it can't be used on its own to detect the climb.
+        // Gating everything through this explicit two-state check (rather than just
+        // OR-ing isWallHanging in unconditionally) also keeps a stale-true flag from
+        // lighting the trail up in states where it shouldn't, e.g. TakeDamage right
+        // after an interrupted hang.
+        bool isWallHanging = _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.Platformer
+                           && _playerCtrl.groundCheck.isWallHanging;
+        bool isOnLedge = _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.OnLedge;
 
-        if (!wallHanging)
+        if (!isWallHanging && !isOnLedge)
         {
             ReleaseCurrent();
             SetEmitting(false);
@@ -100,32 +60,25 @@ public class FireTrailWallEmitter : MonoBehaviour
         }
 
         SetEmitting(true);
-        TrySpawn();
+
+        if (isOnLedge)
+        {
+            // One-shot: exactly one stamp, right as the climb is initiated — not the
+            // continuous spacing-gated stream TrySpawn does for an active wall-slide.
+            if (!_wasOnLedge) PlaceLedgeClimbStamp();
+        }
+        else
+        {
+            TrySpawn();
+        }
+
+        _wasOnLedge = isOnLedge;
     }
 
-    private void OnDisable()
+    protected override void ReleaseCurrent()
     {
-        ReleaseCurrent();
-        SetEmitting(false);
-    }
-
-    /// <summary>Forces the wall trail particle system's emission rate to Max Emission or 0. No-op if none is assigned.</summary>
-    private void SetEmitting(bool emitting)
-    {
-        if (_particleSystem == null) return;
-
-        ParticleSystem.EmissionModule emission = _particleSystem.emission;
-        emission.enabled = true;   // otherwise rateOverTime has no effect regardless of value
-        emission.rateOverTime = emitting ? _maxEmission : 0f;
-    }
-
-    private void ReleaseCurrent()
-    {
-        if (_currentController == null) return;
-
-        _currentController.Release();
-        _currentController = null;
-        _hasLastSpawn = false;   // the next wall-hang event places its first stamp immediately
+        _wasOnLedge = false;
+        base.ReleaseCurrent();
     }
 
     // ── Spawning ─────────────────────────────────────────────────────────────
@@ -140,18 +93,33 @@ public class FireTrailWallEmitter : MonoBehaviour
         // at vertical center, is close enough to gate spawning; the actual stamp
         // position below is found with a proper wall probe.
         Vector2 cheapWallPos = GetCheapWallPos(wallDir);
-        if (_hasLastSpawn && Vector2.Distance(cheapWallPos, _lastSpawnPos) < _spawnInterval) return;
+        if (ShouldSkipSpacing(cheapWallPos)) return;
 
+        PlaceStampAt(cheapWallPos, wallDir);
+    }
+
+    /// <summary>
+    /// Places the single stamp that marks a ledge climb starting. Bypasses TrySpawn's
+    /// spacing gate entirely — this fires exactly once, on the frame OnLedge begins.
+    /// </summary>
+    private void PlaceLedgeClimbStamp()
+    {
+        Vector2 wallDir = _playerCtrl.Flipped ? Vector2.left : Vector2.right;
+        PlaceStampAt(GetCheapWallPos(wallDir), wallDir);
+    }
+
+    private void PlaceStampAt(Vector2 wallPos, Vector2 wallDir)
+    {
         if (_currentController == null)
         {
             _currentController = GetPooledController();
             if (_currentController == null) return;   // maxPooledControllers < 1 misconfiguration guard
         }
 
-        TryGetWallPoint(cheapWallPos, wallDir, out Vector2 point, out Vector2 normal);
+        TryGetWallPoint(wallPos, wallDir, out Vector2 point, out Vector2 normal);
         _currentController.PlaceStamp(point, normal);
 
-        _lastSpawnPos = cheapWallPos;
+        _lastSpawnPos = wallPos;
         _hasLastSpawn = true;
     }
 
@@ -180,39 +148,5 @@ public class FireTrailWallEmitter : MonoBehaviour
         point = footPos;
         normal = -wallDir;
         return false;
-    }
-
-    // ── Controller pooling ───────────────────────────────────────────────────
-    private FireTrailController GetPooledController()
-    {
-        FireTrailController controller;
-
-        if (_available.Count > 0)
-        {
-            controller = _available.Dequeue();
-        }
-        else if (_checkedOut.Count > 0)
-        {
-            // Pool exhausted — extinguish the oldest still-burning run early rather
-            // than growing the pool at runtime.
-            controller = _checkedOut[0];
-            _checkedOut.RemoveAt(0);
-            controller.ForceFinish();
-        }
-        else
-        {
-            return null;   // maxPooledControllers < 1 misconfiguration guard
-        }
-
-        controller.Prepare(ReturnController);
-        _checkedOut.Add(controller);
-        return controller;
-    }
-
-    /// <summary>Called by a FireTrailController when it has fully burned out after being released.</summary>
-    private void ReturnController(FireTrailController controller)
-    {
-        _checkedOut.Remove(controller);
-        _available.Enqueue(controller);
     }
 }
