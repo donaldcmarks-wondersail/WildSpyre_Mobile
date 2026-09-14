@@ -8,20 +8,24 @@ using UnityEngine;
 ///
 /// Usage:
 ///   - Attach to a child GameObject of the enemy with its own Collider2D (trigger).
-///   - Disable the child GameObject by default; abilities enable/disable it during attacks.
-///   - The enemy body itself (tag "Enemy") handles passive contact damage via
-///     MNGR_PlayerLife.OnCollisionEnter2D — no damager needed for that.
+///   - Ability-gated hitbox (melee swing, dash contact): leave Start Active off —
+///     the child starts disabled and abilities enable/disable it during attack windows.
+///   - Passive body-contact damage: turn Start Active on — the hitbox (sized to the
+///     enemy's body) stays on permanently. PlayerCol/EnemyCol no longer physically
+///     collide (see the Physics 2D layer matrix), so this is how "walking into an
+///     enemy hurts you" is detected now instead of a solid-collision contact.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CTRL_EnemyDamager : MonoBehaviour
 {
+    [SerializeField] private bool _startActive = false;
+
     private void Awake()
     {
         gameObject.tag = "DamagePlayer";
         GetComponent<Collider2D>().isTrigger = true;
 
-        // Hitbox is inactive by default; abilities activate it during attack windows
-        gameObject.SetActive(false);
+        gameObject.SetActive(_startActive);
     }
 
     /// <summary>Enable or disable this hitbox. Called by ability scripts.</summary>

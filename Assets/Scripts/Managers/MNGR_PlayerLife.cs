@@ -127,11 +127,9 @@ public class MNGR_PlayerLife : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.tag == "Enemy" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
-        {
-            playerLoseLife();
-        }
-
+        // Enemy body contact damage now flows through CTRL_EnemyDamager (a trigger,
+        // caught below in OnTriggerEnter2D) — PlayerCol and EnemyCol no longer
+        // physically collide, so no "Enemy" tag case is reachable here any more.
         if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
             playerLoseLife();

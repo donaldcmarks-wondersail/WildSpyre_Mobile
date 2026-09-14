@@ -17,5 +17,5 @@ MonoBehaviour:
   range: 2
   dashForce: 12
   dashDuration: 0.2
-  invulnerableDuringDash: 1
+  invulnerableDuringDash: 0
   dashParticlesPrefab: {fileID: 0}

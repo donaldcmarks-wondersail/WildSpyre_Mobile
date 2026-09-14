@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: EAS_Flying_Basic
   m_EditorClassIdentifier: 
   abilities:
-  - {fileID: 11400000, guid: 8c7ab531b5ba60e4993ab00b9b354e5c, type: 2}
+  - {fileID: 11400000, guid: 0ad95f32b1974bc41b411f8b89baf446, type: 2}

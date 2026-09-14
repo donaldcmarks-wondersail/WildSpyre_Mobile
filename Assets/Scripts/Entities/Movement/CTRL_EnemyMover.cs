@@ -102,7 +102,12 @@ public class CTRL_EnemyMover : MonoBehaviour, IEnemyMover
         _isJumping = false;
         _smoothVelRef = Vector2.zero;
         _waypoints.Clear();
-        _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+
+        // Flyers have no gravity to hold them up while stopped — zero both axes so
+        // they hover in place instead of drifting on whatever vertical velocity they
+        // had when the stop was requested (e.g. mid-descent toward a target).
+        bool isFlying = _profile.capabilities.HasFlag(MovementCapability.Fly);
+        _rb.linearVelocity = isFlying ? Vector2.zero : new Vector2(0f, _rb.linearVelocity.y);
     }
 
     public void SetSpeed(float speed)

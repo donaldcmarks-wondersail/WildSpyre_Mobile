@@ -18,6 +18,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int _currentHP;
     [SerializeField] private bool _isInvulnerable;
+    private bool _abilityInvulnerable;   // driven by abilities (e.g. Ability_Dash), independent of hit i-frames
 
     [Header("Events")]
     public UnityEvent onDamaged = new UnityEvent();
@@ -31,6 +32,13 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     // ── Public accessors ─────────────────────────────────────────────────────
     public int  CurrentHP => _currentHP;
     public bool IsDead    => _currentHP <= 0;
+    private bool IsInvulnerable => _isInvulnerable || _abilityInvulnerable;
+
+    /// <summary>
+    /// Lets an ability (e.g. a dash) grant invulnerability for its own duration,
+    /// separate from the post-hit i-frame window so the two never stomp each other.
+    /// </summary>
+    public void SetAbilityInvulnerable(bool on) => _abilityInvulnerable = on;
 
     // ── Initialization ───────────────────────────────────────────────────────
     public void Initialize(SO_EnemyStats stats, CTRL_EnemyStateMachine stateMachine, Rigidbody2D rb)
@@ -44,7 +52,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     // ── Physics callbacks ────────────────────────────────────────────────────
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (_isInvulnerable || IsDead) return;
+        if (IsInvulnerable || IsDead) return;
 
         if (other.gameObject.layer != LayerMask.NameToLayer("PlayerDmg")) return;
 
@@ -64,7 +72,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     // ── Public damage API ────────────────────────────────────────────────────
     public void TakeDamage(int amount, Vector2 knockbackDir)
     {
-        if (_isInvulnerable || IsDead) return;
+        if (IsInvulnerable || IsDead) return;
         if (ReduceHP(amount)) return;   // died
 
         // Apply knockback impulse
@@ -87,7 +95,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     /// </summary>
     public void ApplyBurnTick(int amount)
     {
-        if (_isInvulnerable || IsDead) return;
+        if (IsInvulnerable || IsDead) return;
         ReduceHP(amount);
     }
 

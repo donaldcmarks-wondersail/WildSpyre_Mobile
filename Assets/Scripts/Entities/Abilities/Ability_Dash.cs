@@ -1,8 +1,9 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Launches the enemy toward the player with a burst of velocity.
-/// Optionally triggers invulnerability during the dash window.
+/// Launches the enemy toward the player with a burst of velocity, held for
+/// dashDuration, then hard-stopped. Optionally invulnerable for that window.
 /// </summary>
 public class Ability_Dash : IEnemyAbility
 {
@@ -20,15 +21,33 @@ public class Ability_Dash : IEnemyAbility
 
     public void Execute(EnemyBlackboard board)
     {
-        if (!IsReady || board.target == null) return;
+        if (!IsReady || board.target == null || board.owner == null) return;
 
         _cooldownTimer = _config.cooldown;
 
         Vector2 dashDir = ((Vector2)board.target.position - board.rb.position).normalized;
-        board.rb.linearVelocity = dashDir * _config.dashForce;
 
         if (_config.dashParticlesPrefab != null)
             Object.Instantiate(_config.dashParticlesPrefab, board.rb.position, Quaternion.identity);
+
+        board.owner.StartCoroutine(DashCO(board, dashDir));
+    }
+
+    private IEnumerator DashCO(EnemyBlackboard board, Vector2 dashDir)
+    {
+        if (_config.invulnerableDuringDash)
+            board.health?.SetAbilityInvulnerable(true);
+
+        board.rb.linearVelocity = dashDir * _config.dashForce;
+
+        float startTime = Time.time;
+        while (Time.time < startTime + _config.dashDuration)
+            yield return null;
+
+        board.rb.linearVelocity = Vector2.zero;
+
+        if (_config.invulnerableDuringDash)
+            board.health?.SetAbilityInvulnerable(false);
     }
 
     public void UpdateCooldown(float deltaTime)
