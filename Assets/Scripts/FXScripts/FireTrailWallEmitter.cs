@@ -31,6 +31,18 @@ public class FireTrailWallEmitter : FireTrailEmitterBase
     [SerializeField] private float _wallProbeSkin = 0.05f;
 
     private bool _wasOnLedge;
+    private float _lastSeenWallJumpTime;
+
+    protected override void Awake()
+    {
+        base.Awake();
+
+        // Seeded from the player's own current value rather than a guessed constant
+        // (e.g. -1) — jumpVars.wallJumpedTime defaults to 0, and guessing wrong here
+        // would read as "a wall jump just fired" on the very first Update() and place
+        // a phantom stamp before the player has done anything at all.
+        _lastSeenWallJumpTime = _playerCtrl.jumpVars.wallJumpedTime;
+    }
 
     protected override Vector3 GetPoolParkPosition(int index)
     {
@@ -52,7 +64,23 @@ public class FireTrailWallEmitter : FireTrailEmitterBase
                            && _playerCtrl.groundCheck.isWallHanging;
         bool isOnLedge = _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.OnLedge;
 
-        if (!isWallHanging && !isOnLedge)
+        // A buffered jump lets executeJump() fire in the same FixedUpdate tick as the
+        // CheckSurroundings call that just set isWallHanging true — applyMovement
+        // (which contains the jump-buffer check) runs after CheckSurroundings in that
+        // same method call, and a wall jump immediately clears isWallHanging again as
+        // part of firing. Both the true and the false happen before this Update() ever
+        // gets to look, so isWallHanging can go true-then-false entirely invisibly and
+        // no run ever opens for a hang that genuinely happened. jumpVars.wallJumpedTime
+        // updating is unambiguous proof a wall jump fired (only ever set from a wall
+        // jump) regardless of whether isWallHanging was ever observed — if no run is
+        // open when that happens, this hang was missed and gets its one stamp here.
+        // Guarded on _currentController == null so an ordinary, already-observed hang
+        // that ends in a normal wall jump doesn't get a redundant extra stamp.
+        float wallJumpedTime = _playerCtrl.jumpVars.wallJumpedTime;
+        bool missedBufferedWallJump = wallJumpedTime > _lastSeenWallJumpTime && _currentController == null;
+        _lastSeenWallJumpTime = wallJumpedTime;
+
+        if (!isWallHanging && !isOnLedge && !missedBufferedWallJump)
         {
             ReleaseCurrent();
             SetEmitting(false);
@@ -66,6 +94,10 @@ public class FireTrailWallEmitter : FireTrailEmitterBase
             // One-shot: exactly one stamp, right as the climb is initiated — not the
             // continuous spacing-gated stream TrySpawn does for an active wall-slide.
             if (!_wasOnLedge) PlaceLedgeClimbStamp();
+        }
+        else if (missedBufferedWallJump)
+        {
+            PlaceMissedWallJumpStamp();
         }
         else
         {
@@ -108,7 +140,36 @@ public class FireTrailWallEmitter : FireTrailEmitterBase
         PlaceStampAt(GetCheapWallPos(wallDir), wallDir);
     }
 
+    /// <summary>
+    /// Places the stamp a wall jump earned when its hang was never actually observed
+    /// (see the missedBufferedWallJump comment in Update). Flipped may already reflect
+    /// the post-jump outward direction by the time this runs rather than the into-the-
+    /// wall direction the hang itself had, so unlike the other placement paths this
+    /// can't trust Flipped for which side to probe — it checks both.
+    /// </summary>
+    private void PlaceMissedWallJumpStamp()
+    {
+        TryFindWallEitherSide(out Vector2 point, out Vector2 normal);
+        PlaceStampInto(point, normal);
+    }
+
+    private bool TryFindWallEitherSide(out Vector2 point, out Vector2 normal)
+    {
+        if (TryGetWallPoint(GetCheapWallPos(Vector2.right), Vector2.right, out point, out normal)) return true;
+        if (TryGetWallPoint(GetCheapWallPos(Vector2.left), Vector2.left, out point, out normal)) return true;
+
+        point = _playerCollider.bounds.center;
+        normal = Vector2.up;
+        return false;
+    }
+
     private void PlaceStampAt(Vector2 wallPos, Vector2 wallDir)
+    {
+        TryGetWallPoint(wallPos, wallDir, out Vector2 point, out Vector2 normal);
+        PlaceStampInto(point, normal);
+    }
+
+    private void PlaceStampInto(Vector2 point, Vector2 normal)
     {
         if (_currentController == null)
         {
@@ -116,10 +177,9 @@ public class FireTrailWallEmitter : FireTrailEmitterBase
             if (_currentController == null) return;   // maxPooledControllers < 1 misconfiguration guard
         }
 
-        TryGetWallPoint(wallPos, wallDir, out Vector2 point, out Vector2 normal);
         _currentController.PlaceStamp(point, normal);
 
-        _lastSpawnPos = wallPos;
+        _lastSpawnPos = point;
         _hasLastSpawn = true;
     }
 
