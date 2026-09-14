@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: EAS_Grounded_Basic
   m_EditorClassIdentifier: 
   abilities:
-  - {fileID: 11400000, guid: 0ad95f32b1974bc41b411f8b89baf446, type: 2}
+  - {fileID: 11400000, guid: 8d7b3077f1e57614285c3b7150cca111, type: 2}
