@@ -1016,7 +1016,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         rb.isKinematic = true;
     }
     
-    public void setStateTakeDamage()
+    public void setStateTakeDamage(Vector2 hitSourcePosition)
     {
         if (_damagerReactionCoroutine != null)
         {
@@ -1035,7 +1035,12 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         {
             stopSkid();
         }
-        StartCoroutine(TakeDamageCO(playerLifeManager.playerDmgVariables.damageTimer, playerLifeManager.playerDmgVariables.damageKnockback));
+
+        // Which side the hit came from — knockback and the hit-reaction facing both key off
+        // this, not off whichever way the player happened to be facing when they got hit.
+        bool attackerOnLeft = hitSourcePosition.x < ((Vector2)transform.position).x;
+
+        StartCoroutine(TakeDamageCO(playerLifeManager.playerDmgVariables.damageTimer, playerLifeManager.playerDmgVariables.damageKnockback, attackerOnLeft));
     }
 
     private void stopSkid()
@@ -1128,38 +1133,48 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         yield return null;
     }
     
-    public IEnumerator TakeDamageCO(float damageTimer, Vector2 damageKnockback)
+    public IEnumerator TakeDamageCO(float damageTimer, Vector2 damageKnockback, bool attackerOnLeft)
     {
         StartCoroutine(TakeDmgInvulnerableTimerCO());
-        float t = 0.0f;
         Vector2 calcPos = Vector2.zero;
 
-        bool wasFlipped = Flipped;
+        // Face toward whichever side the attack came from — holds until the player moves
+        // again and normal movement-driven facing takes back over.
+        Flipped = attackerOnLeft;
 
-        if (Flipped)
+        if (attackerOnLeft)
         {
             damageKnockback.x = -damageKnockback.x;
         }
 
         Vector2 startingPos = this.transform.position;
         Vector2 targetPos = this.transform.position + (Vector3)damageKnockback;
-        
-        while (t < damageTimer)
+        float duration = Mathf.Max(damageTimer, 0.0001f);
+        float startTime = Time.time;
+
+        while (true)
         {
-            t += Time.fixedDeltaTime;
-            
-            calcPos.x = Mathf.Lerp(startingPos.x, targetPos.x, t/damageTimer);
-            calcPos.y = Mathf.Lerp(startingPos.y, targetPos.y, t / damageTimer) + playerLifeManager.playerDmgVariables.knockbackOffsetCurve.Evaluate(t/damageTimer);
+            // Elapsed-time based, not an accumulated per-frame increment — frame-rate
+            // independent (no drift, no assumption about how often this loop iterates)
+            // instead of the old t += Time.fixedDeltaTime inside an Update-cadence loop,
+            // which silently ran in slow motion on any device below ~50fps.
+            float t = Mathf.Clamp01((Time.time - startTime) / duration);
+
+            calcPos.x = Mathf.Lerp(startingPos.x, targetPos.x, t);
+            calcPos.y = Mathf.Lerp(startingPos.y, targetPos.y, t) + playerLifeManager.playerDmgVariables.knockbackOffsetCurve.Evaluate(t);
             rb.MovePosition(calcPos);
 
+            // Re-assert every frame so the flip holds for the whole reaction regardless of
+            // what else runs that frame.
+            playerSpriteRend.transform.localScale = attackerOnLeft ? new Vector3(-1f, 1f, 1f) : Vector3.one;
+
+            if (t >= 1f) break;
             yield return null;
         }
-        
+
         rb.MovePosition(calcPos);
         //resetPlayerPhysics();
         //rb.AddForce(moveVars.calcVelocity);
-
-        Flipped = wasFlipped;
 
         PlayerState = playerControlState.Platformer;
 
@@ -1204,7 +1219,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
 
             if (PlayerState == playerControlState.OnLedge)
             {
-                
+
             }else{
                 if (flipped)
                 {

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewProjectileAbility", menuName = "WildSpyre/Enemy/Ability/Projectile")]
-public class SO_AbilityProjectile : SO_AbilityBase
+public class SO_AbilityProjectile : SO_AbilityBaseMovable
 {
     [Header("Projectile Settings")]
     public GameObject projectilePrefab;

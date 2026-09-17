@@ -14,6 +14,11 @@ public class EnemyState_Stunned : IEnemyState
         _stunTimer = DefaultStunDuration;
         board.mover?.Stop();
         board.anim?.SetBool("isStunned", true);
+
+        // Same fix as EnemyState_TakeDamage: attackCooldownTimer only ticks down inside
+        // EnemyState_Attack.Update(), so being interrupted into Stunned mid-attack would
+        // otherwise orphan it and permanently block Chase's re-entry into Attack.
+        board.attackCooldownTimer = 0f;
     }
 
     public void Update(EnemyBlackboard board)

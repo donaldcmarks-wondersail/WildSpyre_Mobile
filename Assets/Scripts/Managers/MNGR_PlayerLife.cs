@@ -87,7 +87,7 @@ public class MNGR_PlayerLife : MonoBehaviour
         }
     }
 
-    public void playerLoseLife()
+    public void playerLoseLife(Vector2 hitSourcePosition)
     {
         playerLifeVars.numLives -= 1;
 
@@ -99,7 +99,7 @@ public class MNGR_PlayerLife : MonoBehaviour
         else
         {
             StartCoroutine(setInvul_TakeDamageCO());
-            componentRefs.playerCtrl.setStateTakeDamage();
+            componentRefs.playerCtrl.setStateTakeDamage(hitSourcePosition);
         }
 
         updatePlayerLivesHUD();
@@ -132,7 +132,7 @@ public class MNGR_PlayerLife : MonoBehaviour
         // physically collide, so no "Enemy" tag case is reachable here any more.
         if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
-            playerLoseLife();
+            playerLoseLife(collision.transform.position);
         }
     }
 
@@ -140,7 +140,7 @@ public class MNGR_PlayerLife : MonoBehaviour
     {
         if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
-            playerLoseLife();
+            playerLoseLife(collision.transform.position);
         }
         
         if (collision.gameObject.tag == "LevelComplete")

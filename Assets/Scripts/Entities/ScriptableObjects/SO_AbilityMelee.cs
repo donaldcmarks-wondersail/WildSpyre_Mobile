@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewMeleeAbility", menuName = "WildSpyre/Enemy/Ability/Melee")]
-public class SO_AbilityMelee : SO_AbilityBase
+public class SO_AbilityMelee : SO_AbilityBaseMovable
 {
     [Header("Melee Settings")]
     public float hitboxActiveDuration = 0.3f;

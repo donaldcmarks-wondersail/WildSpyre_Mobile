@@ -25,8 +25,43 @@ public class Ability_Melee : IEnemyAbility
         if (!IsReady || board.owner == null) return;
 
         _cooldownTimer = _config.cooldown;
+
+        Vector2 dir = board.target != null
+            ? ((Vector2)board.target.position - board.rb.position).normalized
+            : Vector2.zero;
+
+        board.owner.StartCoroutine(MeleeSequenceCO(board, dir));
+    }
+
+    private IEnumerator MeleeSequenceCO(EnemyBlackboard board, Vector2 dir)
+    {
+        if (_config.useAnticipation)
+            yield return AnticipationCO(board, dir);
+
         board.anim?.SetTrigger("Attack");
-        board.owner.StartCoroutine(MeleeHitboxCO(board));
+
+        if (_config.useAbilityMovement)
+            board.owner.StartCoroutine(AbilityMotion.MoveCO(board, dir, _config.abilityMovementDistance,
+                _config.abilityMovementDuration, _config.abilityMovementCurveX, _config.abilityMovementCurveY));
+
+        yield return MeleeHitboxCO(board);
+    }
+
+    private IEnumerator AnticipationCO(EnemyBlackboard board, Vector2 dir)
+    {
+        if (!string.IsNullOrEmpty(_config.anticipationTrigger))
+            board.anim?.SetTrigger(_config.anticipationTrigger);
+
+        if (_config.anticipationDistance > 0f)
+        {
+            Vector2 antDir = -dir;
+            yield return AbilityMotion.MoveCO(board, antDir, _config.anticipationDistance,
+                _config.anticipationDuration, _config.anticipationCurveX, _config.anticipationCurveY);
+        }
+        else
+        {
+            yield return AbilityMotion.WaitCO(_config.anticipationDuration);
+        }
     }
 
     private IEnumerator MeleeHitboxCO(EnemyBlackboard board)
