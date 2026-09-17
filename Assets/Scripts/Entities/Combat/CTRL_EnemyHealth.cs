@@ -64,6 +64,14 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
             amount = damager.damage;
             damager.DamagerReaction();
         }
+        else
+        {
+            // Player ability hits (combo, charge projectile) — no stomp-style reaction,
+            // just damage.
+            PlayerAbilityDamager abilityDamager = other.GetComponentInParent<PlayerAbilityDamager>();
+            if (abilityDamager != null)
+                amount = abilityDamager.damage;
+        }
 
         Vector2 knockbackDir = ((Vector2)transform.position - (Vector2)other.transform.position).normalized;
         TakeDamage(amount, knockbackDir);

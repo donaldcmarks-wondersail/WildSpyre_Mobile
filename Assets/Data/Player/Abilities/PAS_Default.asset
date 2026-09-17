@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efd8a0d77b053a04a974627e748d4f46, type: 3}
+  m_Name: PAS_Default
+  m_EditorClassIdentifier:
+  comboAbility: {fileID: 11400000, guid: 46c638af04a5f957c4d297c25f60d3b2, type: 2}
+  chargeAbility: {fileID: 11400000, guid: 62c781d3d774fe6b26b1b2af55187f7b, type: 2}
