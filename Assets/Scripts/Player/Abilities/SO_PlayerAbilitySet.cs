@@ -5,4 +5,5 @@ public class SO_PlayerAbilitySet : ScriptableObject
 {
     public SO_PlayerAbility_Combo comboAbility;
     public SO_PlayerAbility_Charge chargeAbility;
+    public SO_PlayerAbility_Aim aimAbility;
 }

@@ -42,11 +42,34 @@ public class FireTrailSlingEmitter : MonoBehaviour
         if (collision.contactCount == 0) return;
 
         ContactPoint2D contact = collision.GetContact(0);
-        float angleFromUp = Vector2.Angle(contact.normal, Vector2.up);
+        PlaceImpactStamp(contact.point, contact.normal);
+    }
+
+    /// <summary>
+    /// Routes one stamp to the ground or wall emitter's pool based on how steep the given
+    /// surface normal is. Public so other impact sources (e.g. PlayerProjectile) can reuse
+    /// this classification and this emitter pair's existing scene wiring instead of
+    /// duplicating either.
+    /// </summary>
+    public void PlaceImpactStamp(Vector2 point, Vector2 normal)
+    {
+        float angleFromUp = Vector2.Angle(normal, Vector2.up);
 
         if (angleFromUp <= _floorAngleThreshold)
-            _groundEmitter.PlaceOneShotStamp(contact.point, contact.normal);
+            _groundEmitter.PlaceOneShotStamp(point, normal);
         else
-            _wallEmitter.PlaceOneShotStamp(contact.point, contact.normal);
+            _wallEmitter.PlaceOneShotStamp(point, normal);
+    }
+
+    /// <summary>
+    /// Places one stamp from the GROUND emitter's floor-authored prefab regardless of how steep
+    /// the surface is, with the stamp rotated so its local up follows the surface normal. Unlike
+    /// PlaceImpactStamp this deliberately skips the floor/wall split: the wall emitter uses a
+    /// separately authored prefab (P_FireTrailWallController/Cell), so rotating it by the normal
+    /// would come out wrong. Used by projectile impacts, which want one prefab on every surface.
+    /// </summary>
+    public void PlaceAlignedStamp(Vector2 point, Vector2 normal)
+    {
+        _groundEmitter.PlaceOneShotStamp(point, normal, alignToNormal: true);
     }
 }

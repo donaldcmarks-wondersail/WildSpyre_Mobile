@@ -18,8 +18,13 @@ public class SO_PlayerAbility_Charge : ScriptableObject
     public int damage = 2;
 
     [Header("Animation")]
-    [Tooltip("Fired once hold time crosses chargeTimeThreshold, while still held.")]
+    [Tooltip("Seconds after the initial touch before the charge animation starts. Keep this shorter than " +
+             "chargeTimeThreshold so the wind-up plays while the charge is still building; a quick tap " +
+             "released before this never starts the charge animation at all.")]
+    public float chargeAnimStartDelay = 0.15f;
+    [Tooltip("Fired once the hold passes chargeAnimStartDelay, while still held.")]
     public string chargeAnimTrigger = "ChargeLoop";
-    [Tooltip("Fired the instant the charge ability actually releases.")]
+    [Tooltip("Fired on joystick release whenever the charge animation had started, regardless of " +
+             "how long the hold was — including releases before chargeTimeThreshold that don't fire the projectile.")]
     public string releaseAnimTrigger = "ChargeRelease";
 }

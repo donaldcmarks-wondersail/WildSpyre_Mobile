@@ -69,6 +69,8 @@ AnimationClip:
       value: {fileID: -1169622715030023718, guid: b797d9bd70f1afc4495f7597b7d63fb1, type: 3}
     - time: 0.2
       value: {fileID: 0}
+    - time: 0.28333333
+      value: {fileID: 0}
     attribute: m_Sprite
     path: PlayerArt/SPRT_Player/MeleeSlashes/Melee_03
     classID: 212
@@ -105,12 +107,13 @@ AnimationClip:
     - {fileID: 7403394089896480032, guid: b797d9bd70f1afc4495f7597b7d63fb1, type: 3}
     - {fileID: -1169622715030023718, guid: b797d9bd70f1afc4495f7597b7d63fb1, type: 3}
     - {fileID: 0}
+    - {fileID: 0}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.21666667
+    m_StopTime: 0.3
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0

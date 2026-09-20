@@ -42,8 +42,15 @@ public class FireTrailCell : MonoBehaviour
         if (_light != null) _baseLightIntensity = _light.intensity;
     }
 
-    /// <summary>Places and (re)activates this stamp. Called by FireTrailController from its pool.</summary>
-    public void Activate(Vector2 position, Vector2 surfaceNormal, float radius, FireTrailController owner)
+    /// <summary>
+    /// Places and (re)activates this stamp. Called by FireTrailController from its pool.
+    /// The nested fire particle emits along this cell's local up, so by default the stamp stays
+    /// unrotated and the fire always burns world-up. With alignToNormal the whole cell is rotated
+    /// so local up follows the surface normal instead — fire burns out of a ceiling or off a wall
+    /// rather than into it. Rotation is always explicitly reset otherwise, since pooled cells get
+    /// reused and would otherwise keep a previous aligned stamp's rotation.
+    /// </summary>
+    public void Activate(Vector2 position, Vector2 surfaceNormal, float radius, FireTrailController owner, bool alignToNormal = false)
     {
         // Activate the GameObject FIRST: if this cell was instantiated inactive (e.g.
         // the prefab's root is saved inactive), Awake() — and the _collider it
@@ -53,6 +60,14 @@ public class FireTrailCell : MonoBehaviour
 
         _owner = owner;
         transform.position = position;
+
+        // Explicit Z rotation (not Quaternion.FromToRotation): for a straight-down ceiling normal
+        // FromToRotation picks an arbitrary flip axis, which can spin the cell about X instead of Z.
+        // Angle 0 = normal straight up = the unrotated default.
+        transform.rotation = alignToNormal
+            ? Quaternion.Euler(0f, 0f, Mathf.Atan2(surfaceNormal.y, surfaceNormal.x) * Mathf.Rad2Deg - 90f)
+            : Quaternion.identity;
+
         _collider.radius = radius;
         _collider.enabled = true;
         SurfaceNormal = surfaceNormal;

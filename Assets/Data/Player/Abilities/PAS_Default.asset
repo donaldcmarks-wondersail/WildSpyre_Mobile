@@ -11,6 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: efd8a0d77b053a04a974627e748d4f46, type: 3}
   m_Name: PAS_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   comboAbility: {fileID: 11400000, guid: 46c638af04a5f957c4d297c25f60d3b2, type: 2}
   chargeAbility: {fileID: 11400000, guid: 62c781d3d774fe6b26b1b2af55187f7b, type: 2}
+  aimAbility: {fileID: 11400000, guid: 653f50126097526312cc78e0a175a313, type: 2}

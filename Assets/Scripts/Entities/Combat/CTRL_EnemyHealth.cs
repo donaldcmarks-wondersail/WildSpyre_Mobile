@@ -135,8 +135,8 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     {
         onDeath?.Invoke();
         _stateMachine.TransitionTo("Dead");
-        // Short delay so the death animation has time to play
-        Destroy(gameObject, 1.5f);
+        // Per-enemy delay (SO_EnemyStats.deathDestroyDelay) so the death animation has time to play
+        Destroy(gameObject, _stats.deathDestroyDelay);
     }
 
     private IEnumerator InvulnerabilityWindowCO()

@@ -16,7 +16,8 @@ MonoBehaviour:
   cooldown: 1.5
   aimDeadzone: 0.2
   projectilePrefab: {fileID: 4165357425254522582, guid: b70faedf5c0988342a568fa175317cf2, type: 3}
-  launchSpeed: 8
-  damage: 2
-  chargeAnimTrigger: ChargeLoop
+  launchSpeed: 15
+  damage: 4
+  chargeAnimStartDelay: 0.15
+  chargeAnimTrigger: Charge
   releaseAnimTrigger: ChargeRelease

@@ -23,17 +23,46 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
              "in the scene; this script enables it only for each hit's active window.")]
     [SerializeField] private PlayerAbilityDamager _comboHitbox;
 
+    [Header("Charge Aim Reticle")]
+    [Tooltip("Object whose rotation follows the charge joystick's aim while it's held — its local +X " +
+             "axis points where the projectile will launch. Put the reticle sprite as a child of this " +
+             "object, and keep it out of the Flipped-scaled art node so the flip doesn't mirror the rotation.")]
+    [SerializeField] private Transform _aimReticle;
+
+    [Header("Projectile Impact FX")]
+    [Tooltip("Handed to every projectile this controller spawns; only projectiles with Spawn Fire " +
+             "Trail On Impact enabled on their prefab actually use it. Auto-found on this GameObject " +
+             "(the player root, where FireTrailSlingEmitter lives) if left empty.")]
+    [SerializeField] private FireTrailSlingEmitter _fireTrailStamper;
+
     private int _comboIndex;
     private float _comboWindowTimer;
     private float _comboRecoveryTimer;
 
     private float _chargeCooldownTimer;
+    private float _aimCooldownTimer;
     private bool _chargeLoopFired;
+    private bool _aimAnimActive;
 
     /// <summary>Held duration at/above this is a charge release, not a combo tap. Used by INPT_AbilityJoystick.</summary>
     public float ChargeTimeThreshold => _abilitySet != null && _abilitySet.chargeAbility != null
         ? _abilitySet.chargeAbility.chargeTimeThreshold
         : float.MaxValue;
+
+    /// <summary>
+    /// Joystick drag magnitude at/above which a quick (sub-charge) release is an aimed release
+    /// rather than a melee tap. float.MaxValue when no aim ability is equipped, so the joystick
+    /// falls back to plain taps. Used by INPT_AbilityJoystick.
+    /// </summary>
+    public float AimThreshold => _abilitySet != null && _abilitySet.aimAbility != null
+        ? _abilitySet.aimAbility.aimThreshold
+        : float.MaxValue;
+
+    private void Awake()
+    {
+        if (_fireTrailStamper == null)
+            _fireTrailStamper = GetComponent<FireTrailSlingEmitter>();
+    }
 
     private void Update()
     {
@@ -49,6 +78,9 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
 
         if (_chargeCooldownTimer > 0f)
             _chargeCooldownTimer -= Time.deltaTime;
+
+        if (_aimCooldownTimer > 0f)
+            _aimCooldownTimer -= Time.deltaTime;
     }
 
     private bool AbilitiesAllowed()
@@ -60,6 +92,11 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
     // ── Combo ────────────────────────────────────────────────────────────────
     public void RegisterTap()
     {
+        // A release between chargeAnimStartDelay and chargeTimeThreshold lands here as a tap
+        // with the charge animation already started — end it (fires the release trigger,
+        // clears the flag) before the combo hit.
+        EndChargeAnim();
+
         if (!AbilitiesAllowed()) return;
         if (_abilitySet == null || _abilitySet.comboAbility == null) return;
         if (_comboRecoveryTimer > 0f) return;
@@ -101,12 +138,38 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
     }
 
     // ── Charge ───────────────────────────────────────────────────────────────
-    /// <summary>Called every frame by INPT_AbilityJoystick while the button is held.</summary>
-    public void OnHoldTick(float heldDuration)
+    /// <summary>
+    /// Where a charge release would launch: the joystick's drag direction, or the facing
+    /// direction (Flipped) while the drag is inside the aim deadzone. Shared by the aim
+    /// reticle and the actual launch so the reticle always shows where the shot will go.
+    /// </summary>
+    private Vector2 ResolveAimDirection(SO_PlayerAbility_Charge charge, Vector2 aimDir)
     {
+        if (aimDir.magnitude >= charge.aimDeadzone)
+            return aimDir.normalized;
+
+        bool facingLeft = _playerCtrl != null && _playerCtrl.Flipped;
+        return facingLeft ? Vector2.left : Vector2.right;
+    }
+
+    private void UpdateAimReticle(Vector2 aimDir)
+    {
+        if (_aimReticle == null || _abilitySet == null || _abilitySet.chargeAbility == null) return;
+
+        Vector2 dir = ResolveAimDirection(_abilitySet.chargeAbility, aimDir);
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        _aimReticle.rotation = Quaternion.Euler(0f, 0f, angle);
+    }
+
+    /// <summary>Called every frame by INPT_AbilityJoystick while the button is held.</summary>
+    public void OnHoldTick(float heldDuration, Vector2 aimDir)
+    {
+        UpdateAimReticle(aimDir);
+        UpdateAimAnim(aimDir);
+
         if (_chargeLoopFired) return;
         if (_abilitySet == null || _abilitySet.chargeAbility == null) return;
-        if (heldDuration < _abilitySet.chargeAbility.chargeTimeThreshold) return;
+        if (heldDuration < _abilitySet.chargeAbility.chargeAnimStartDelay) return;
         if (!AbilitiesAllowed()) return;
 
         _chargeLoopFired = true;
@@ -114,9 +177,47 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
             _playerCtrl.animatorChar?.SetTrigger(_abilitySet.chargeAbility.chargeAnimTrigger);
     }
 
+    /// <summary>
+    /// Drives the Aim animator bool live: true while the joystick drag is at/past the aim
+    /// threshold, false otherwise. Only touches the Animator when the value changes.
+    /// </summary>
+    private void UpdateAimAnim(Vector2 aimDir)
+    {
+        SetAimAnim(AbilitiesAllowed() && aimDir.magnitude >= AimThreshold);
+    }
+
+    private void SetAimAnim(bool active)
+    {
+        if (_aimAnimActive == active) return;
+        _aimAnimActive = active;
+
+        SO_PlayerAbility_Aim aim = _abilitySet != null ? _abilitySet.aimAbility : null;
+        if (aim != null && _playerCtrl != null && !string.IsNullOrEmpty(aim.aimAnimBool))
+            _playerCtrl.animatorChar?.SetBool(aim.aimAnimBool, active);
+    }
+
+    /// <summary>
+    /// Ends the hold animations on any joystick release: clears the Aim bool, and fires the
+    /// charge release trigger whenever the charge animation had started, regardless of whether
+    /// the hold reached chargeTimeThreshold (so an early release still exits the charge pose),
+    /// then clears the flag.
+    /// </summary>
+    private void EndChargeAnim()
+    {
+        SetAimAnim(false);
+
+        bool wasCharging = _chargeLoopFired;
+        _chargeLoopFired = false;
+        if (!wasCharging) return;
+
+        SO_PlayerAbility_Charge charge = _abilitySet != null ? _abilitySet.chargeAbility : null;
+        if (charge != null && _playerCtrl != null && !string.IsNullOrEmpty(charge.releaseAnimTrigger))
+            _playerCtrl.animatorChar?.SetTrigger(charge.releaseAnimTrigger);
+    }
+
     public void OnChargeReleased(float heldDuration, Vector2 aimDir)
     {
-        _chargeLoopFired = false;
+        EndChargeAnim();
 
         if (!AbilitiesAllowed()) return;
         if (_abilitySet == null || _abilitySet.chargeAbility == null) return;
@@ -126,26 +227,46 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         if (_chargeCooldownTimer > 0f) return;
         if (charge.projectilePrefab == null) return;
 
-        // Default aim ties to facing (Flipped) when the drag is inside the deadzone —
-        // decided in this turn's plan, not left ambiguous.
-        Vector2 launchDir = aimDir.magnitude >= charge.aimDeadzone
-            ? aimDir.normalized
-            : (_playerCtrl.Flipped ? Vector2.left : Vector2.right);
+        Vector2 launchDir = ResolveAimDirection(charge, aimDir);
 
-        if (!string.IsNullOrEmpty(charge.releaseAnimTrigger))
-            _playerCtrl.animatorChar?.SetTrigger(charge.releaseAnimTrigger);
-
-        GameObject proj = Instantiate(charge.projectilePrefab, _playerCtrl.rb.position, Quaternion.identity);
-        PlayerProjectile projCtrl = proj.GetComponent<PlayerProjectile>();
-        if (projCtrl != null)
-            projCtrl.Launch(launchDir, charge.launchSpeed, charge.damage);
+        SpawnProjectile(charge.projectilePrefab, launchDir, charge.launchSpeed, charge.damage);
 
         _chargeCooldownTimer = charge.cooldown;
+    }
+
+    // ── Aim ──────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Quick touch-aim-release: the joystick was released before the charge threshold with a drag
+    /// past AimThreshold. Fires the aim ability along the drag direction.
+    /// </summary>
+    public void OnAimReleased(Vector2 aimDir)
+    {
+        // The charge animation can already have started (past chargeAnimStartDelay) — end it.
+        EndChargeAnim();
+
+        if (!AbilitiesAllowed()) return;
+        if (_abilitySet == null || _abilitySet.aimAbility == null) return;
+
+        SO_PlayerAbility_Aim aim = _abilitySet.aimAbility;
+        if (_aimCooldownTimer > 0f) return;
+        if (aim.projectilePrefab == null) return;
+
+        SpawnProjectile(aim.projectilePrefab, aimDir.normalized, aim.launchSpeed, aim.damage);
+
+        _aimCooldownTimer = aim.cooldown;
+    }
+
+    private void SpawnProjectile(GameObject prefab, Vector2 direction, float speed, int damage)
+    {
+        GameObject proj = Instantiate(prefab, _playerCtrl.rb.position, Quaternion.identity);
+        PlayerProjectile projCtrl = proj.GetComponent<PlayerProjectile>();
+        if (projCtrl != null)
+            projCtrl.Launch(direction, speed, damage, _fireTrailStamper);
     }
 
     /// <summary>Called by INPT_AbilityJoystick if a press is abandoned (e.g. dragged off the control).</summary>
     public void OnHoldCancelled()
     {
-        _chargeLoopFired = false;
+        EndChargeAnim();
     }
 }

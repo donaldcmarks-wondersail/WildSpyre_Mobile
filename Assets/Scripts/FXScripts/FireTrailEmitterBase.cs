@@ -132,12 +132,12 @@ public abstract class FireTrailEmitterBase : MonoBehaviour
     /// merge with whatever a continuous trail from this same emitter is doing. Used
     /// for one-off events, e.g. a sling bounce impact.
     /// </summary>
-    public void PlaceOneShotStamp(Vector2 point, Vector2 normal)
+    public void PlaceOneShotStamp(Vector2 point, Vector2 normal, bool alignToNormal = false)
     {
         FireTrailController controller = GetPooledController();
         if (controller == null) return;   // maxPooledControllers < 1 misconfiguration guard
 
-        controller.PlaceStamp(point, normal);
+        controller.PlaceStamp(point, normal, alignToNormal);
         controller.Release();
     }
 

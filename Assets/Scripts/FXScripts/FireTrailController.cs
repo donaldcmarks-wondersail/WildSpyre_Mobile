@@ -117,13 +117,16 @@ public class FireTrailController : MonoBehaviour
         _lineRenderer.positionCount = 0;
     }
 
-    /// <summary>Places one stamp at an already-resolved ground point. Called by FireTrailEmitter.</summary>
-    public void PlaceStamp(Vector2 point, Vector2 normal)
+    /// <summary>
+    /// Places one stamp at an already-resolved ground point. Called by FireTrailEmitter.
+    /// alignToNormal rotates the stamp's fire to burn along the surface normal (see FireTrailCell.Activate).
+    /// </summary>
+    public void PlaceStamp(Vector2 point, Vector2 normal, bool alignToNormal = false)
     {
         FireTrailCell cell = GetPooledCell();
         if (cell == null) return;   // maxActiveCells < 1 misconfiguration — skip rather than throw
 
-        cell.Activate(point, normal, _cellRadius, this);
+        cell.Activate(point, normal, _cellRadius, this, alignToNormal);
         _active.Add(cell);
     }
 
