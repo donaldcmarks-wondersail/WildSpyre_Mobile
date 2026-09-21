@@ -90,8 +90,22 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
     }
 
     // ── Combo ────────────────────────────────────────────────────────────────
+    /// <summary>True while the lockout after the final combo hit is running.</summary>
+    private bool ComboRecoveryActive => _comboRecoveryTimer > 0f;
+
     public void RegisterTap()
     {
+        // Combo recovery: no new animation triggers of any kind while it runs — that includes the
+        // charge-release trigger EndChargeAnim would otherwise fire below, not just the combo hit's
+        // own. OnHoldTick holds the charge-start trigger back during recovery as well, so there's
+        // never a charge animation left running here to release; just clear the state silently.
+        if (ComboRecoveryActive)
+        {
+            _chargeLoopFired = false;
+            SetAimAnim(false);
+            return;
+        }
+
         // A release between chargeAnimStartDelay and chargeTimeThreshold lands here as a tap
         // with the charge animation already started — end it (fires the release trigger,
         // clears the flag) before the combo hit.
@@ -99,7 +113,6 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
 
         if (!AbilitiesAllowed()) return;
         if (_abilitySet == null || _abilitySet.comboAbility == null) return;
-        if (_comboRecoveryTimer > 0f) return;
 
         SO_PlayerAbility_Combo combo = _abilitySet.comboAbility;
         if (combo.hits == null || _comboIndex >= combo.hits.Length) return;
@@ -168,6 +181,10 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         UpdateAimAnim(aimDir);
 
         if (_chargeLoopFired) return;
+
+        // No charge-start trigger while combo recovery runs. Not latched — if the hold outlasts
+        // the recovery, this passes on a later frame and the charge animation starts then.
+        if (ComboRecoveryActive) return;
         if (_abilitySet == null || _abilitySet.chargeAbility == null) return;
         if (heldDuration < _abilitySet.chargeAbility.chargeAnimStartDelay) return;
         if (!AbilitiesAllowed()) return;
