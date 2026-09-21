@@ -63,4 +63,16 @@ public class EnemyBlackboard
     [Header("Timers")]
     public float attackCooldownTimer;
     public float loseTargetTimer;
+
+    [Header("Interrupt / Armor (Time.time deadlines)")]
+    [Tooltip("Set when the enemy is interrupted — it can't start any ability until this time passes.")]
+    public float abilitiesLockedUntil;
+    [Tooltip("Set by an ability with Ignore Knockback — knockback is ignored until this time passes.")]
+    public float knockbackImmuneUntil;
+    [Tooltip("Set by an ability with Ignore Interrupt — interrupts are ignored until this time passes.")]
+    public float interruptImmuneUntil;
+
+    public bool AbilitiesLocked  => Time.time < abilitiesLockedUntil;
+    public bool KnockbackImmune  => Time.time < knockbackImmuneUntil;
+    public bool InterruptImmune  => Time.time < interruptImmuneUntil;
 }

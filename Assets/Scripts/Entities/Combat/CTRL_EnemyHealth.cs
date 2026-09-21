@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -17,7 +16,8 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
 {
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int _currentHP;
-    [SerializeField] private bool _isInvulnerable;
+    [SerializeField] private bool _isInvulnerable;   // mirrors the i-frame window, for the Inspector only
+    private float _invulnerableUntil;                 // Time.time deadline of the post-hit i-frame window
     private bool _abilityInvulnerable;   // driven by abilities (e.g. Ability_Dash), independent of hit i-frames
 
     [Header("Events")]
@@ -28,11 +28,18 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     private SO_EnemyStats _stats;
     private CTRL_EnemyStateMachine _stateMachine;
     private Rigidbody2D _rb;
+    private EnemyBlackboard _board;
 
     // ── Public accessors ─────────────────────────────────────────────────────
     public int  CurrentHP => _currentHP;
     public bool IsDead    => _currentHP <= 0;
-    private bool IsInvulnerable => _isInvulnerable || _abilityInvulnerable;
+    private bool InHitIFrames => Time.time < _invulnerableUntil;
+    private bool IsInvulnerable => InHitIFrames || _abilityInvulnerable;
+
+    private void Update()
+    {
+        _isInvulnerable = InHitIFrames;
+    }
 
     /// <summary>
     /// Lets an ability (e.g. a dash) grant invulnerability for its own duration,
@@ -41,57 +48,106 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     public void SetAbilityInvulnerable(bool on) => _abilityInvulnerable = on;
 
     // ── Initialization ───────────────────────────────────────────────────────
-    public void Initialize(SO_EnemyStats stats, CTRL_EnemyStateMachine stateMachine, Rigidbody2D rb)
+    public void Initialize(SO_EnemyStats stats, CTRL_EnemyStateMachine stateMachine, Rigidbody2D rb, EnemyBlackboard board)
     {
         _stats        = stats;
         _stateMachine = stateMachine;
         _rb           = rb;
+        _board        = board;
         _currentHP    = stats.maxHP;
+        Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} INIT hp={_currentHP} stats={stats.name} t={Time.time:F2}");
     }
 
     // ── Physics callbacks ────────────────────────────────────────────────────
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (IsInvulnerable || IsDead) return;
+    private void OnTriggerEnter2D(Collider2D other) => HandleContact(other, isStay: false);
 
+    // Ability hits keep checking while they overlap: OnTriggerEnter2D fires only once per overlap, so a
+    // swing that first touched the enemy while it was invulnerable (dash) would otherwise be lost.
+    private void OnTriggerStay2D(Collider2D other) => HandleContact(other, isStay: true);
+
+    private void HandleContact(Collider2D other, bool isStay)
+    {
+        if (IsDead) return;
         if (other.gameObject.layer != LayerMask.NameToLayer("PlayerDmg")) return;
 
-        // Read damage amount and trigger stomp reaction on the damager (gives player bounce-back)
-        int amount = 1;
+        // Player ability hits (combo, charge/aim projectiles) — no stomp-style reaction; whether they
+        // knock back or interrupt is up to the ability's authored HitEffects. Checked before the stomp
+        // Damager so a hitbox parented under a Damager can never be mistaken for a stomp.
+        PlayerAbilityDamager abilityDamager = other.GetComponentInParent<PlayerAbilityDamager>();
+        if (abilityDamager != null)
+        {
+            // Dash invulnerability blocks the hit without using it up, so it lands once the dash ends.
+            if (_abilityInvulnerable) { Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ability hit BLOCKED by dash invulnerability, src={other.name}"); return; }
+            if (abilityDamager.HasHit(this)) return;
+
+            HitEffects fx = abilityDamager.effects;
+            DamageInfo abilityInfo = new DamageInfo
+            {
+                amount = abilityDamager.damage,
+                applyKnockback = fx.causesKnockback,
+                knockback = abilityDamager.ResolveDirection(transform.position) * fx.knockbackForce,
+                interrupt = fx.causesInterrupt,
+                interruptDuration = fx.interruptDuration
+            };
+
+            Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ability hit src={other.name} dmg={abilityInfo.amount} hpBefore={_currentHP} t={Time.time:F2}");
+            abilityDamager.MarkHit(this);
+            // Each swing hits each enemy once (tracked above), so the post-hit i-frames don't gate it.
+            TakeDamage(abilityInfo, ignoreHitIFrames: true);
+            return;
+        }
+
+        // Everything else stays one-shot per contact: no Stay handling, still gated by the i-frame window.
+        if (isStay || IsInvulnerable) return;
+
+        DamageInfo info = new DamageInfo { amount = 1 };
+
         Damager damager = other.GetComponentInParent<Damager>();
         if (damager != null)
         {
-            amount = damager.damage;
+            // Player stomp — triggers the stomp reaction on the damager (bounce-back for the player).
+            // Keeps its long-standing behaviour: knocked back with the enemy's own stats and cut off
+            // into hit-stun, with no extra ability lockout beyond that stun.
             damager.DamagerReaction();
-        }
-        else
-        {
-            // Player ability hits (combo, charge projectile) — no stomp-style reaction,
-            // just damage.
-            PlayerAbilityDamager abilityDamager = other.GetComponentInParent<PlayerAbilityDamager>();
-            if (abilityDamager != null)
-                amount = abilityDamager.damage;
+
+            Vector2 dir = ((Vector2)transform.position - (Vector2)other.transform.position).normalized;
+            info.amount = damager.damage;
+            info.applyKnockback = true;
+            info.knockback = new Vector2(dir.x * _stats.knockbackForce, _stats.knockbackDirection.y * _stats.knockbackForce);
+            info.interrupt = true;
+            info.interruptDuration = 0f;
         }
 
-        Vector2 knockbackDir = ((Vector2)transform.position - (Vector2)other.transform.position).normalized;
-        TakeDamage(amount, knockbackDir);
+        TakeDamage(info);
     }
 
     // ── Public damage API ────────────────────────────────────────────────────
-    public void TakeDamage(int amount, Vector2 knockbackDir)
+    /// <param name="ignoreHitIFrames">Skip the post-hit i-frame window (dash invulnerability still blocks).</param>
+    public void TakeDamage(DamageInfo info, bool ignoreHitIFrames = false)
     {
-        if (IsInvulnerable || IsDead) return;
-        if (ReduceHP(amount)) return;   // died
+        if (IsDead || _abilityInvulnerable) return;
+        if (!ignoreHitIFrames && InHitIFrames) return;
+        if (ReduceHP(info.amount)) return;   // died
 
-        // Apply knockback impulse
-        Vector2 knockback = new Vector2(
-            knockbackDir.x * _stats.knockbackForce,
-            _stats.knockbackDirection.y * _stats.knockbackForce
-        );
-        _rb.linearVelocity = knockback;
+        // Every non-fatal hit plays the damage reaction, whether or not it interrupts or knocks back.
+        _board.anim?.SetTrigger("TakeDamage");
 
-        _stateMachine.TransitionTo("TakeDamage");
-        StartCoroutine(InvulnerabilityWindowCO());
+        // Interrupt: cancel the current ability (done by the TakeDamage state on entry) and lock
+        // abilities out until the timer passes. Skipped while an ability has interrupt armor up.
+        if (info.interrupt && !_board.InterruptImmune)
+        {
+            _board.abilitiesLockedUntil = Mathf.Max(_board.abilitiesLockedUntil, Time.time + info.interruptDuration);
+            _stateMachine.TransitionTo("TakeDamage");
+        }
+
+        // Knockback, scaled by this enemy's weight. Applied AFTER the state transition on purpose:
+        // entering TakeDamage calls mover.Stop(), which zeroes the velocity — setting it before would
+        // silently erase the knockback. (While an ability's own movement is running — a dash, an
+        // anticipation pullback — that movement writes position every frame and overrides this.)
+        if (info.applyKnockback && !_stats.ignoreKnockback && !_board.KnockbackImmune)
+            _rb.linearVelocity = info.knockback * _stats.knockbackMagnitude;
+
+        _invulnerableUntil = Time.time + _stats.invulnerabilityDuration;
     }
 
     /// <summary>
@@ -103,6 +159,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     /// </summary>
     public void ApplyBurnTick(int amount)
     {
+        if (amount <= 0) return;   // a zero/negative tick would heal (HP -= amount) — burning never does that
         if (IsInvulnerable || IsDead) return;
         ReduceHP(amount);
     }
@@ -117,6 +174,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     private bool ReduceHP(int amount)
     {
         _currentHP -= amount;
+        Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ReduceHP amount={amount} hpAfter={_currentHP}");
         onDamaged?.Invoke();
 
         if (_stats.hitParticlesPrefab != null)
@@ -133,18 +191,11 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
 
     private void Die()
     {
+        Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} DIE");
         onDeath?.Invoke();
         _stateMachine.TransitionTo("Dead");
         // Per-enemy delay (SO_EnemyStats.deathDestroyDelay) so the death animation has time to play
         Destroy(gameObject, _stats.deathDestroyDelay);
     }
 
-    private IEnumerator InvulnerabilityWindowCO()
-    {
-        _isInvulnerable = true;
-        float startTime = Time.time;
-        while (Time.time < startTime + _stats.invulnerabilityDuration)
-            yield return null;
-        _isInvulnerable = false;
-    }
 }

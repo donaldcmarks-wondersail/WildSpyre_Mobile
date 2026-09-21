@@ -38,7 +38,7 @@ public class EnemyState_Attack : IEnemyState
         // state. (CheckTransitions can't signal this itself: returning this
         // state's own name is treated as "no transition" and Enter() wouldn't
         // re-run, so the re-attack has to happen here instead.)
-        if (board.attackCooldownTimer <= 0f && board.hasTarget && board.target != null)
+        if (board.attackCooldownTimer <= 0f && !board.AbilitiesLocked && board.hasTarget && board.target != null)
         {
             float dist = Vector2.Distance(board.rb.position, board.target.position);
             if (dist <= board.AttackRange)

@@ -1,7 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// Brief hit-stun state. Enemy halts movement and plays a damage reaction.
+/// Interrupt hit-stun. Only entered when a hit actually INTERRUPTS the enemy (CTRL_EnemyHealth
+/// decides that — a plain hit no longer knocks it out of what it's doing). Cancels the ability
+/// in progress and halts movement for a brief reaction window; the separate ability lockout timer
+/// (board.abilitiesLockedUntil, set by CTRL_EnemyHealth) keeps it from using abilities afterwards.
+/// The "TakeDamage" animator trigger is fired by CTRL_EnemyHealth on every hit, not here.
 /// Returns to Chase or Patrol once the reaction window expires.
 /// </summary>
 public class EnemyState_TakeDamage : IEnemyState
@@ -13,7 +17,10 @@ public class EnemyState_TakeDamage : IEnemyState
     {
         _reactionTimer = ReactionDuration;
         board.mover?.Stop();
-        board.anim?.SetTrigger("TakeDamage");
+
+        // Whatever it was doing is over: stop the ability coroutines and switch off ability
+        // hitboxes (body-contact stays on — it's still alive).
+        board.abilities?.CancelActiveAbilities(board, includeBodyHitbox: false);
 
         // attackCooldownTimer only ever ticks down inside EnemyState_Attack.Update() — being
         // yanked in here mid-attack (e.g. a player stomp) would otherwise orphan it at

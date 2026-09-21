@@ -7,6 +7,13 @@ public class SO_EnemyStats : ScriptableObject
     public int maxHP = 3;
     public float invulnerabilityDuration = 0.5f;
 
+    [Header("Knockback (Weight)")]
+    [Tooltip("This enemy is never knocked back by any hit.")]
+    public bool ignoreKnockback = false;
+    [Tooltip("Multiplier on every knockback this enemy receives. 1.0 = standard; above 1 flies further " +
+             "(lighter), below 1 barely moves (heavier). No effect if Ignore Knockback is on.")]
+    public float knockbackMagnitude = 1f;
+
     [Header("Damage To Player")]
     public int damageDealtToPlayer = 1;
     public float knockbackForce = 5f;

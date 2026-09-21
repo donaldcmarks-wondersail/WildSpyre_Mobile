@@ -38,6 +38,9 @@ public class CTRL_AbilityController : MonoBehaviour
     /// </summary>
     public bool TryUseAbility(string abilityName, EnemyBlackboard board)
     {
+        // Interrupted — no ability of any kind until the lockout timer runs out.
+        if (board.AbilitiesLocked) return false;
+
         float dist = TargetDistance(board);
 
         if (string.IsNullOrEmpty(abilityName))
@@ -46,7 +49,7 @@ public class CTRL_AbilityController : MonoBehaviour
             {
                 if (ability.IsReady && dist <= EffectiveRange(ability, board))
                 {
-                    ability.Execute(board);
+                    ExecuteWithArmor(ability, board);
                     return true;
                 }
             }
@@ -58,12 +61,54 @@ public class CTRL_AbilityController : MonoBehaviour
             if (ability.AbilityName == abilityName && ability.IsReady
                 && dist <= EffectiveRange(ability, board))
             {
-                ability.Execute(board);
+                ExecuteWithArmor(ability, board);
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Starts the ability and, if it's authored with armor, opens the matching immunity window(s)
+    /// on the blackboard — measured from this moment. CTRL_EnemyHealth reads them when a hit lands.
+    /// </summary>
+    private static void ExecuteWithArmor(IEnemyAbility ability, EnemyBlackboard board)
+    {
+        SO_AbilityBase cfg = ability.Config;
+        if (cfg != null)
+        {
+            if (cfg.ignoreKnockback)
+                board.knockbackImmuneUntil = Time.time + cfg.ignoreKnockbackDuration;
+            if (cfg.ignoreInterrupt)
+                board.interruptImmuneUntil = Time.time + cfg.ignoreInterruptDuration;
+        }
+
+        ability.Execute(board);
+    }
+
+    /// <summary>
+    /// Cancels whatever ability is mid-flight: every ability (dash, melee, projectile, ability
+    /// movement) runs its coroutines on board.owner, so this stops them all, switches off ability
+    /// hitboxes (a stopped melee coroutine would leave its hitbox stuck on) and clears the dash's
+    /// invulnerability (a stopped dash can't). The permanent body-contact hitbox is left on unless
+    /// includeBodyHitbox — an interrupted enemy is still alive and still hurts on contact; a dead
+    /// one shouldn't.
+    /// </summary>
+    public void CancelActiveAbilities(EnemyBlackboard board, bool includeBodyHitbox)
+    {
+        if (board.owner != null)
+        {
+            board.owner.StopAllCoroutines();
+
+            foreach (CTRL_EnemyDamager damager in board.owner.GetComponentsInChildren<CTRL_EnemyDamager>(true))
+            {
+                if (includeBodyHitbox || !damager.StartsActive)
+                    damager.SetActive(false);
+            }
+        }
+
+        board.health?.SetAbilityInvulnerable(false);
     }
 
     /// <summary>

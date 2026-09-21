@@ -8,7 +8,8 @@ public class SO_PlayerAbility_Combo : ScriptableObject
     {
         public string animTrigger = "Combo1";
         public int damage = 1;
-        public float hitboxActiveDuration = 0.15f;
+        [Tooltip("Optional knockback / interrupt for this hit — e.g. only the finisher knocks back.")]
+        public HitEffects hitEffects = HitEffects.Default;
     }
 
     [Header("Combo Hits (in order — index 0 fires on the first tap)")]

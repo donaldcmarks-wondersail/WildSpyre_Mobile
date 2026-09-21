@@ -158,7 +158,7 @@ public class CTRL_Enemy : MonoBehaviour
     {
         _health = GetComponent<CTRL_EnemyHealth>();
         if (_health == null) _health = gameObject.AddComponent<CTRL_EnemyHealth>();
-        _health.Initialize(_profile.stats, _stateMachine, rb);
+        _health.Initialize(_profile.stats, _stateMachine, rb, _board);
         _board.health = _health;
     }
 

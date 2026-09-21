@@ -19,6 +19,8 @@ public class SO_PlayerAbility_Aim : ScriptableObject
     public GameObject projectilePrefab;
     public float launchSpeed = 10f;
     public int damage = 1;
+    [Tooltip("Optional knockback / interrupt applied to enemies the projectile hits.")]
+    public HitEffects hitEffects = HitEffects.Default;
 
     [Header("Animation")]
     [Tooltip("Animator Bool parameter driven live while the joystick is held: true while the drag is at/past " +

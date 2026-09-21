@@ -13,22 +13,9 @@ public class EnemyState_Dead : IEnemyState
     {
         board.mover?.Stop();
 
-        if (board.owner != null)
-        {
-            // Every ability (dash, melee, projectile, ability movement) runs its coroutines on
-            // board.owner, so this cancels any in-flight one. CTRL_EnemyHealth's own
-            // coroutine lives on a separate component and is unaffected.
-            board.owner.StopAllCoroutines();
-
-            // Body-contact hitbox and any melee hitbox (both CTRL_EnemyDamager) — the things
-            // that damage the player. A stopped melee coroutine would otherwise leave its
-            // hitbox stuck enabled.
-            foreach (CTRL_EnemyDamager damager in board.owner.GetComponentsInChildren<CTRL_EnemyDamager>(true))
-                damager.SetActive(false);
-        }
-
-        // A stopped dash can't clear its own invulnerability flag.
-        board.health?.SetAbilityInvulnerable(false);
+        // Cancel any in-flight ability and switch off everything that hurts the player, body-contact
+        // hitbox included (a dead enemy shouldn't damage on contact).
+        board.abilities?.CancelActiveAbilities(board, includeBodyHitbox: true);
 
         board.anim?.SetTrigger("Death");
 

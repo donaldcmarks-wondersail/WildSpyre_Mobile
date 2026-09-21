@@ -184,7 +184,7 @@ MonoBehaviour:
   _visualSurfaceOffset: 0.03
   _burnLifetime: 1.5
   _tickInterval: 0.25
-  _tickDamage: -1
+  _tickDamage: 1
   _lightIntensityCurve:
     serializedVersion: 2
     m_Curve:

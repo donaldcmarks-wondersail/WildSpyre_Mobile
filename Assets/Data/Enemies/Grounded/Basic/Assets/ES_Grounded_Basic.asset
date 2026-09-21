@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: ES_Grounded_Basic
   m_EditorClassIdentifier: 
   maxHP: 3
-  invulnerabilityDuration: 0.5
+  invulnerabilityDuration: 0.125
+  ignoreKnockback: 0
+  knockbackMagnitude: 1
   damageDealtToPlayer: 1
   knockbackForce: 5
   knockbackDirection: {x: 1, y: 0.5}

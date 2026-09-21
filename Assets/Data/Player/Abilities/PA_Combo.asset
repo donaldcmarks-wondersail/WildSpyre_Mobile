@@ -11,16 +11,28 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 46a2ed952714376469084061bf762038, type: 3}
   m_Name: PA_Combo
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   hits:
   - animTrigger: Combo1
     damage: 1
-    hitboxActiveDuration: 0.15
+    hitEffects:
+      causesKnockback: 0
+      knockbackForce: 5
+      causesInterrupt: 0
+      interruptDuration: 0.75
   - animTrigger: Combo2
     damage: 1
-    hitboxActiveDuration: 0.15
+    hitEffects:
+      causesKnockback: 0
+      knockbackForce: 5
+      causesInterrupt: 0
+      interruptDuration: 0.75
   - animTrigger: Combo3
     damage: 1
-    hitboxActiveDuration: 0.15
+    hitEffects:
+      causesKnockback: 1
+      knockbackForce: 5
+      causesInterrupt: 1
+      interruptDuration: 0.75
   comboWindowDuration: 0.5
   comboRecoveryTime: 0.2

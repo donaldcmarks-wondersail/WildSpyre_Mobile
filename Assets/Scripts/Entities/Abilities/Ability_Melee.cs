@@ -14,6 +14,7 @@ public class Ability_Melee : IEnemyAbility
     public string AbilityName => _config.abilityName;
     public bool   IsReady     => _cooldownTimer <= 0f;
     public float  Range       => _config.range;
+    public SO_AbilityBase Config => _config;
 
     public Ability_Melee(SO_AbilityMelee config)
     {

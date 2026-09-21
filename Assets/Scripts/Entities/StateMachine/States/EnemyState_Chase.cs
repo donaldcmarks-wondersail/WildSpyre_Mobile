@@ -92,7 +92,8 @@ public class EnemyState_Chase : IEnemyState
         if (board.hasTarget && board.target != null)
         {
             float dist = Vector2.Distance(board.rb.position, board.target.position);
-            if (dist <= board.AttackRange && board.attackCooldownTimer <= 0f)
+            // Not while interrupted — Attack would fire, fail the lockout, and burn its cooldown.
+            if (dist <= board.AttackRange && board.attackCooldownTimer <= 0f && !board.AbilitiesLocked)
                 return "Attack";
         }
 

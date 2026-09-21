@@ -384,4 +384,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damage: 1
+  effects:
+    causesKnockback: 0
+    knockbackForce: 0
+    causesInterrupt: 0
+    interruptDuration: 0
   _startActive: 1
+  _hitParticlePrefabs:
+  - {fileID: 0}
+  - {fileID: 1993392080937107507, guid: a269a9efe0e756e4faad36ec23580001, type: 3}
+  - {fileID: 1993392080937107507, guid: f6adec9ad05afa34698e870e887cd0ea, type: 3}
+  - {fileID: 1993392080937107507, guid: b76b26c9924e48a42a7027a57e0138e5, type: 3}
+  - {fileID: 1993392080937107507, guid: 88d42364a16aecd4389c5f4a04220e37, type: 3}

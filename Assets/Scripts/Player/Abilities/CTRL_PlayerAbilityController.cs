@@ -18,9 +18,9 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
     [SerializeField] private SO_PlayerAbilitySet _abilitySet;
 
     [Header("Combo Hitbox")]
-    [Tooltip("Child hitbox with a PlayerAbilityDamager — place it under the character art " +
-             "so it mirrors automatically with Flipped. Leave it disabled (Start Active off) " +
-             "in the scene; this script enables it only for each hit's active window.")]
+    [Tooltip("Child hitbox with a PlayerAbilityDamager — place it under the character art so it mirrors " +
+             "automatically with Flipped. The combo ANIMATIONS switch it on and off; this script never does. " +
+             "It only writes each hit's damage and knockback/interrupt onto it when the hit is triggered.")]
     [SerializeField] private PlayerAbilityDamager _comboHitbox;
 
     [Header("Charge Aim Reticle")]
@@ -121,7 +121,7 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         if (!string.IsNullOrEmpty(hit.animTrigger))
             _playerCtrl.animatorChar?.SetTrigger(hit.animTrigger);
 
-        StartCoroutine(ComboHitCO(hit));
+        ApplyHitDataToHitbox(hit);
 
         _comboIndex++;
         if (_comboIndex >= combo.hits.Length)
@@ -136,18 +136,18 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         }
     }
 
-    private IEnumerator ComboHitCO(SO_PlayerAbility_Combo.ComboHit hit)
+    /// <summary>
+    /// Loads this hit's damage and knockback/interrupt onto the combo hitbox. Deliberately does NOT
+    /// enable or disable it — the combo animations switch the hitbox on and off, so when the swing
+    /// connects it already carries the right numbers for the hit that's playing.
+    /// </summary>
+    private void ApplyHitDataToHitbox(SO_PlayerAbility_Combo.ComboHit hit)
     {
-        if (_comboHitbox == null) yield break;
+        if (_comboHitbox == null) return;
 
         _comboHitbox.damage = hit.damage;
-        _comboHitbox.SetActive(true);
-
-        float startTime = Time.time;
-        while (Time.time < startTime + hit.hitboxActiveDuration)
-            yield return null;
-
-        _comboHitbox.SetActive(false);
+        _comboHitbox.effects = hit.hitEffects;
+        _comboHitbox.ResetHits();   // new swing — enemies from the previous one can be hit again
     }
 
     // ── Charge ───────────────────────────────────────────────────────────────
@@ -246,7 +246,7 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
 
         Vector2 launchDir = ResolveAimDirection(charge, aimDir);
 
-        SpawnProjectile(charge.projectilePrefab, launchDir, charge.launchSpeed, charge.damage);
+        SpawnProjectile(charge.projectilePrefab, launchDir, charge.launchSpeed, charge.damage, charge.hitEffects);
 
         _chargeCooldownTimer = charge.cooldown;
     }
@@ -268,17 +268,17 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         if (_aimCooldownTimer > 0f) return;
         if (aim.projectilePrefab == null) return;
 
-        SpawnProjectile(aim.projectilePrefab, aimDir.normalized, aim.launchSpeed, aim.damage);
+        SpawnProjectile(aim.projectilePrefab, aimDir.normalized, aim.launchSpeed, aim.damage, aim.hitEffects);
 
         _aimCooldownTimer = aim.cooldown;
     }
 
-    private void SpawnProjectile(GameObject prefab, Vector2 direction, float speed, int damage)
+    private void SpawnProjectile(GameObject prefab, Vector2 direction, float speed, int damage, HitEffects effects)
     {
         GameObject proj = Instantiate(prefab, _playerCtrl.rb.position, Quaternion.identity);
         PlayerProjectile projCtrl = proj.GetComponent<PlayerProjectile>();
         if (projCtrl != null)
-            projCtrl.Launch(direction, speed, damage, _fireTrailStamper);
+            projCtrl.Launch(direction, speed, damage, effects, _fireTrailStamper);
     }
 
     /// <summary>Called by INPT_AbilityJoystick if a press is abandoned (e.g. dragged off the control).</summary>

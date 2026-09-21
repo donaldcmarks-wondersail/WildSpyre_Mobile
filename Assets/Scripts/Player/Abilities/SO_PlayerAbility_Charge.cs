@@ -16,6 +16,8 @@ public class SO_PlayerAbility_Charge : ScriptableObject
     public GameObject projectilePrefab;
     public float launchSpeed = 8f;
     public int damage = 2;
+    [Tooltip("Optional knockback / interrupt applied to enemies the projectile hits.")]
+    public HitEffects hitEffects = HitEffects.Default;
 
     [Header("Animation")]
     [Tooltip("Seconds after the initial touch before the charge animation starts. Keep this shorter than " +

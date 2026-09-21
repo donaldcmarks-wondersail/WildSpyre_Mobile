@@ -46,7 +46,7 @@ public class PlayerProjectile : MonoBehaviour
     /// player's scene-wired impact stamper; only used if this prefab has Spawn Fire Trail On
     /// Impact enabled (a runtime-spawned prefab can't hold that scene reference itself).
     /// </summary>
-    public void Launch(Vector2 direction, float speed, int damage, FireTrailSlingEmitter fireTrail = null)
+    public void Launch(Vector2 direction, float speed, int damage, HitEffects effects, FireTrailSlingEmitter fireTrail = null)
     {
         _travelDir = direction;
         _fireTrail = fireTrail;
@@ -54,7 +54,11 @@ public class PlayerProjectile : MonoBehaviour
 
         PlayerAbilityDamager damager = GetComponent<PlayerAbilityDamager>();
         if (damager != null)
+        {
             damager.damage = damage;
+            damager.effects = effects;
+            damager.SetFixedDirection(direction);   // knock enemies along the shot, not away from the player
+        }
 
         // Rotate sprite to face travel direction
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;

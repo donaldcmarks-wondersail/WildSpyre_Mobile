@@ -18,6 +18,11 @@ MonoBehaviour:
   projectilePrefab: {fileID: 4165357425254522582, guid: b70faedf5c0988342a568fa175317cf2, type: 3}
   launchSpeed: 15
   damage: 4
+  hitEffects:
+    causesKnockback: 1
+    knockbackForce: 5
+    causesInterrupt: 1
+    interruptDuration: 0.75
   chargeAnimStartDelay: 0.15
   chargeAnimTrigger: Charge
   releaseAnimTrigger: ChargeRelease

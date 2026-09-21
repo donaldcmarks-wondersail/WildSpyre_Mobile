@@ -20,6 +20,12 @@ public class CTRL_EnemyDamager : MonoBehaviour
 {
     [SerializeField] private bool _startActive = false;
 
+    /// <summary>
+    /// True for the permanent body-contact hitbox, false for ability-gated ones (melee swings).
+    /// Lets an interrupt switch off only the ability hitboxes and leave body contact alone.
+    /// </summary>
+    public bool StartsActive => _startActive;
+
     private void Awake()
     {
         gameObject.tag = "DamagePlayer";

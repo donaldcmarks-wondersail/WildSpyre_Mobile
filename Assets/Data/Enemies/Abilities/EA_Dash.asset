@@ -15,6 +15,10 @@ MonoBehaviour:
   abilityName: Ability
   cooldown: 2
   range: 2
+  ignoreKnockback: 1
+  ignoreKnockbackDuration: 1
+  ignoreInterrupt: 1
+  ignoreInterruptDuration: 1
   useAnticipation: 1
   anticipationDistance: 0.5
   anticipationDuration: 0.5
