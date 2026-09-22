@@ -20,6 +20,9 @@ MonoBehaviour:
       knockbackForce: 5
       causesInterrupt: 0
       interruptDuration: 0.75
+      hitStopDuration: 0.04
+      shakeStrength: 0.1
+      shakeDuration: 0.12
   - animTrigger: Combo2
     damage: 1
     hitEffects:
@@ -27,6 +30,9 @@ MonoBehaviour:
       knockbackForce: 5
       causesInterrupt: 0
       interruptDuration: 0.75
+      hitStopDuration: 0.04
+      shakeStrength: 0.12
+      shakeDuration: 0.12
   - animTrigger: Combo3
     damage: 1
     hitEffects:
@@ -34,5 +40,16 @@ MonoBehaviour:
       knockbackForce: 5
       causesInterrupt: 1
       interruptDuration: 0.75
+      hitStopDuration: 0.08
+      shakeStrength: 0.18
+      shakeDuration: 0.18
+  assistDuration: 0.2
+  wallSlideSpeedMultiplier: 0.15
+  airGravityMultiplier: 0.1
+  airMinVerticalVelocity: 0.25
+  airUpwardVelocity: 1.15
+  airHorizontalDamping: 0.8
+  airMoveInputMultiplier: 0.25
+  maxAirAssistHits: 3
   comboWindowDuration: 0.5
   comboRecoveryTime: 0.2

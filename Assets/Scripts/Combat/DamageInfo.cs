@@ -15,4 +15,10 @@ public struct DamageInfo
 
     public bool interrupt;
     public float interruptDuration;
+
+    /// <summary>Real-time seconds to freeze the game on impact (0 = none).</summary>
+    public float hitStopDuration;
+    /// <summary>Camera shake amplitude (world units) and real-time length on impact (0 = none).</summary>
+    public float shakeStrength;
+    public float shakeDuration;
 }

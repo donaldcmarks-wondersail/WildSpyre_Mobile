@@ -23,6 +23,9 @@ MonoBehaviour:
     knockbackForce: 5
     causesInterrupt: 1
     interruptDuration: 0.75
+    hitStopDuration: 0.1
+    shakeStrength: 0.6
+    shakeDuration: 0.25
   chargeAnimStartDelay: 0.15
   chargeAnimTrigger: Charge
   releaseAnimTrigger: ChargeRelease

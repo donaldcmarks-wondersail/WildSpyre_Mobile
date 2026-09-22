@@ -211,6 +211,62 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
     [Header("Physics Materials")]
     public PhysicsMaterials physMats;
 
+    // ── Attack movement assist ───────────────────────────────────────────────
+    // A short-lived tweak to movement, requested by CTRL_PlayerAbilityController while a melee combo
+    // hit plays: a slower wall slide, or in the air a slight lift, lighter gravity and drifting almost
+    // to a halt. It only reshapes falling and AIR movement in applyMovement — never jumping, ground
+    // movement or the sling.
+    [System.Serializable]
+    public struct AttackAssist
+    {
+        public float duration;
+        [Tooltip("Wall slide speed as a fraction of normal (1 = unchanged).")]
+        public float wallSlideMultiplier;
+        [Tooltip("Airborne gravity as a fraction of normal (1 = unchanged).")]
+        public float airGravityMultiplier;
+        [Tooltip("Airborne fall speed never exceeds this (above 0 = a slight lift).")]
+        public float airMinVerticalVelocity;
+        [Tooltip("One-off upward velocity given when the assist starts in the air, if the player is moving slower than this upward.")]
+        public float airUpwardVelocity;
+        [Tooltip("Extra horizontal air damping while active, per 0.1s (0 = none, 0.8 = nearly stops within ~0.2s).")]
+        public float airHorizontalDamping;
+        [Tooltip("Fraction of the player's horizontal steering input still applied in the air while active (1 = unchanged).")]
+        public float airMoveInputMultiplier;
+
+        public static AttackAssist None => new AttackAssist
+        {
+            wallSlideMultiplier = 1f,
+            airGravityMultiplier = 1f,
+            airMinVerticalVelocity = float.NegativeInfinity,
+            airMoveInputMultiplier = 1f
+        };
+    }
+
+    private float _attackAssistUntil;
+    private AttackAssist _assist = AttackAssist.None;
+
+    private bool AttackAssistActive => Time.time < _attackAssistUntil;
+
+    public bool IsGrounded => groundCheck.isGrounded;
+    public bool IsWallHanging => groundCheck.isWallHanging;
+
+    /// <summary>
+    /// Starts an assist for assist.duration seconds, replacing any already running. Wall fields apply while
+    /// wall hanging, air fields while airborne; nothing applies on the ground. The one-off upward velocity is
+    /// given here, at the start, if the player is airborne.
+    /// </summary>
+    public void BeginAttackMovementAssist(AttackAssist assist)
+    {
+        _attackAssistUntil = Time.time + assist.duration;
+        _assist = assist;
+
+        if (!groundCheck.isGrounded && !groundCheck.isWallHanging && assist.airUpwardVelocity > 0f
+            && rb.linearVelocity.y < assist.airUpwardVelocity)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, assist.airUpwardVelocity);
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -355,10 +411,16 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         }
         else
         {
-            rb.gravityScale = jumpVars.startingGravityScale; 
+            rb.gravityScale = jumpVars.startingGravityScale;
         }
 
-        
+        // Melee-combo assist: lighter gravity while airborne (a wall slide is handled by the speed clamp below).
+        if (AttackAssistActive && !groundCheck.isGrounded && !groundCheck.isWallHanging)
+        {
+            rb.gravityScale *= _assist.airGravityMultiplier;
+        }
+
+
         if (Time.time >= jumpVars.wallJumpedTime + jumpVars.wallJumpNoMoveTime)
         {
             if (groundCheck.isGrounded && !slopeCheck.isOnSlope)
@@ -412,16 +474,29 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
             }
             else if(groundCheck.isGrounded == false)
             {
-                horizontalVelocity += moveVars.playerMoveVector.x;
+                // Melee-combo assist, airborne only: steering is dialled down and extra damping bleeds the
+                // horizontal speed off, so an air attack doesn't carry the player across the screen.
+                bool airAssist = AttackAssistActive && !groundCheck.isWallHanging;
+
+                horizontalVelocity += moveVars.playerMoveVector.x * (airAssist ? _assist.airMoveInputMultiplier : 1f);
                 horizontalVelocity *= Mathf.Pow(1f - moveVars.moveDampingInAirBasic, Time.deltaTime * 10f);
+                if (airAssist && _assist.airHorizontalDamping > 0f)
+                {
+                    horizontalVelocity *= Mathf.Pow(1f - Mathf.Clamp01(_assist.airHorizontalDamping), Time.deltaTime * 10f);
+                }
 
                 float verticalVelocity = rb.linearVelocity.y;
 
                 if (groundCheck.isWallHanging)
                 {
-                    if (rb.linearVelocity.y < jumpVars.maxFallWallHangVelocity)
+                    // maxFallWallHangVelocity is negative, so scaling it toward zero slows the slide.
+                    float wallSlideLimit = AttackAssistActive
+                        ? jumpVars.maxFallWallHangVelocity * _assist.wallSlideMultiplier
+                        : jumpVars.maxFallWallHangVelocity;
+
+                    if (rb.linearVelocity.y < wallSlideLimit)
                     {
-                        verticalVelocity = jumpVars.maxFallWallHangVelocity;
+                        verticalVelocity = wallSlideLimit;
                     }
                 }
                 else
@@ -429,6 +504,12 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
                     if (rb.linearVelocity.y < jumpVars.maxFallVelocity)
                     {
                         verticalVelocity = jumpVars.maxFallVelocity;
+                    }
+
+                    // Melee-combo assist: a floor on the fall speed (above zero = a slight lift).
+                    if (AttackAssistActive && verticalVelocity < _assist.airMinVerticalVelocity)
+                    {
+                        verticalVelocity = _assist.airMinVerticalVelocity;
                     }
                 }
 

@@ -17,4 +17,12 @@ MonoBehaviour:
   projectilePrefab: {fileID: 4165357425254522582, guid: a20c2b1e0362d5041a09c3cf8f0006f6, type: 3}
   launchSpeed: 10
   damage: 1
+  hitEffects:
+    causesKnockback: 0
+    knockbackForce: 5
+    causesInterrupt: 0
+    interruptDuration: 0.75
+    hitStopDuration: 0.03
+    shakeStrength: 0.12
+    shakeDuration: 0.1
   aimAnimBool: Aim

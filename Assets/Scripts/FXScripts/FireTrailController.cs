@@ -22,7 +22,7 @@ public class FireTrailController : MonoBehaviour
     [SerializeField] private FireTrailCell _cellPrefab;
 
     [Header("Stamp")]
-    [Tooltip("Trigger radius of each stamp. Should be a little more than half of the emitter's Spawn Interval so neighbors just overlap with no gaps.")]
+    [Tooltip("Half-width of each stamp's box trigger (the box height and offset come from the cell prefab). Should be a little more than half of the emitter's Spawn Interval so neighbors just overlap with no gaps.")]
     [SerializeField] private float _cellRadius = 0.2f;
     [Tooltip("Pool size / max simultaneous stamps in THIS run. Also caps the run's visible length.")]
     [SerializeField] private int _maxActiveCells = 24;

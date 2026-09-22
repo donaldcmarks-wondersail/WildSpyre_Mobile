@@ -38,6 +38,7 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
     private int _comboIndex;
     private float _comboWindowTimer;
     private float _comboRecoveryTimer;
+    private int _airAssistHitsUsed;
 
     private float _chargeCooldownTimer;
     private float _aimCooldownTimer;
@@ -66,6 +67,10 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
 
     private void Update()
     {
+        // The air-assist allowance refreshes on landing or grabbing a wall.
+        if (_playerCtrl != null && (_playerCtrl.IsGrounded || _playerCtrl.IsWallHanging))
+            _airAssistHitsUsed = 0;
+
         if (_comboWindowTimer > 0f)
         {
             _comboWindowTimer -= Time.deltaTime;
@@ -122,6 +127,7 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
             _playerCtrl.animatorChar?.SetTrigger(hit.animTrigger);
 
         ApplyHitDataToHitbox(hit);
+        ApplyMovementAssist(combo);
 
         _comboIndex++;
         if (_comboIndex >= combo.hits.Length)
@@ -133,6 +139,37 @@ public class CTRL_PlayerAbilityController : MonoBehaviour
         else
         {
             _comboWindowTimer = combo.comboWindowDuration;
+        }
+    }
+
+    /// <summary>
+    /// Eases the player's fall for the duration of this combo hit: a slower wall slide on a wall, or lighter
+    /// gravity / a slight lift in the air (limited per trip off the ground). Asks CTRL_PlayerPlatformer to do
+    /// it — this script never moves the player itself. Does nothing on the ground.
+    /// </summary>
+    private void ApplyMovementAssist(SO_PlayerAbility_Combo combo)
+    {
+        if (combo.assistDuration <= 0f) return;
+
+        if (_playerCtrl.IsWallHanging)
+        {
+            CTRL_PlayerPlatformer.AttackAssist assist = CTRL_PlayerPlatformer.AttackAssist.None;
+            assist.duration = combo.assistDuration;
+            assist.wallSlideMultiplier = combo.wallSlideSpeedMultiplier;
+            _playerCtrl.BeginAttackMovementAssist(assist);
+        }
+        else if (!_playerCtrl.IsGrounded && _airAssistHitsUsed < combo.maxAirAssistHits)
+        {
+            _airAssistHitsUsed++;
+
+            CTRL_PlayerPlatformer.AttackAssist assist = CTRL_PlayerPlatformer.AttackAssist.None;
+            assist.duration = combo.assistDuration;
+            assist.airGravityMultiplier = combo.airGravityMultiplier;
+            assist.airMinVerticalVelocity = combo.airMinVerticalVelocity;
+            assist.airUpwardVelocity = combo.airUpwardVelocity;
+            assist.airHorizontalDamping = combo.airHorizontalDamping;
+            assist.airMoveInputMultiplier = combo.airMoveInputMultiplier;
+            _playerCtrl.BeginAttackMovementAssist(assist);
         }
     }
 

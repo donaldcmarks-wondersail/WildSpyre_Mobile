@@ -29,6 +29,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     private CTRL_EnemyStateMachine _stateMachine;
     private Rigidbody2D _rb;
     private EnemyBlackboard _board;
+    private EnemyHitFlash _hitFlash;
 
     // ── Public accessors ─────────────────────────────────────────────────────
     public int  CurrentHP => _currentHP;
@@ -55,6 +56,13 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
         _rb           = rb;
         _board        = board;
         _currentHP    = stats.maxHP;
+
+        if (stats.hitFlashMaterial != null)
+        {
+            _hitFlash = GetComponent<EnemyHitFlash>();
+            if (_hitFlash == null) _hitFlash = gameObject.AddComponent<EnemyHitFlash>();
+            _hitFlash.Initialize(stats.hitFlashMaterial, stats.hitFlashDuration);
+        }
         Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} INIT hp={_currentHP} stats={stats.name} t={Time.time:F2}");
     }
 
@@ -87,7 +95,10 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
                 applyKnockback = fx.causesKnockback,
                 knockback = abilityDamager.ResolveDirection(transform.position) * fx.knockbackForce,
                 interrupt = fx.causesInterrupt,
-                interruptDuration = fx.interruptDuration
+                interruptDuration = fx.interruptDuration,
+                hitStopDuration = fx.hitStopDuration,
+                shakeStrength = fx.shakeStrength,
+                shakeDuration = fx.shakeDuration
             };
 
             Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ability hit src={other.name} dmg={abilityInfo.amount} hpBefore={_currentHP} t={Time.time:F2}");
@@ -127,6 +138,12 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     {
         if (IsDead || _abilityInvulnerable) return;
         if (!ignoreHitIFrames && InHitIFrames) return;
+
+        // Impact feedback on every landed hit, killing blows included (so it goes before ReduceHP).
+        _hitFlash?.Play();
+        HitStop.Trigger(info.hitStopDuration);
+        CameraShake.Shake(info.shakeStrength, info.shakeDuration);
+
         if (ReduceHP(info.amount)) return;   // died
 
         // Every non-fatal hit plays the damage reaction, whether or not it interrupts or knocks back.

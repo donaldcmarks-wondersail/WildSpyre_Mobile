@@ -39,6 +39,15 @@ public class MNGR_PlayerLife : MonoBehaviour
         public Vector2 damageKnockback;
         public AnimationCurve knockbackOffsetCurve;
         public bool invulnerable = false;
+
+        [Header("Impact Feedback")]
+        [Tooltip("Real-time seconds the whole game freezes when the player is hurt. 0 = none. Skipped while " +
+                 "the sling slow-motion has the time scale.")]
+        public float hitStopDuration = 0.06f;
+        [Tooltip("Camera shake amplitude in world units when the player is hurt. 0 = none.")]
+        public float shakeStrength = 0.5f;
+        [Tooltip("How long the camera shake lasts, in real-time seconds.")]
+        public float shakeDuration = 0.25f;
     }
 
     [Header("Player Life Variables")]
@@ -90,6 +99,10 @@ public class MNGR_PlayerLife : MonoBehaviour
     public void playerLoseLife(Vector2 hitSourcePosition)
     {
         playerLifeVars.numLives -= 1;
+
+        // Impact feedback on every hit the player takes, the fatal one included.
+        HitStop.Trigger(playerDmgVariables.hitStopDuration);
+        CameraShake.Shake(playerDmgVariables.shakeStrength, playerDmgVariables.shakeDuration);
 
         if (playerLifeVars.numLives < 1)
         {

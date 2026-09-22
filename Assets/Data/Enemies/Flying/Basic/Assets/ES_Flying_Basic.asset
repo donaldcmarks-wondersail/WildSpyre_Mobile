@@ -22,3 +22,5 @@ MonoBehaviour:
   deathDestroyDelay: 0.25
   deathParticlesPrefab: {fileID: 0}
   hitParticlesPrefab: {fileID: 0}
+  hitFlashMaterial: {fileID: 2100000, guid: 2f8d6b4a9c1e4370b5a7d3e60c9f1b84, type: 2}
+  hitFlashDuration: 0.08

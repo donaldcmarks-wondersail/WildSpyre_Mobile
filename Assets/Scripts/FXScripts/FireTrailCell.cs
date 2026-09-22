@@ -12,14 +12,14 @@ using UnityEngine.Rendering.Universal;
 /// Damage itself isn't applied here either — see FireTrailController's overlap
 /// tracker for why (avoids double-dipping when stamps overlap).
 /// </summary>
-[RequireComponent(typeof(CircleCollider2D))]
+[RequireComponent(typeof(BoxCollider2D))]
 public class FireTrailCell : MonoBehaviour
 {
     [Header("Visual (Optional)")]
     [Tooltip("Optional 2D Point Light that dims as this stamp burns out, driven by FireTrailController's Light Intensity Curve. Safe to leave unassigned.")]
     [SerializeField] private Light2D _light;
 
-    private CircleCollider2D _collider;
+    private BoxCollider2D _collider;
     private FireTrailController _owner;
     private readonly HashSet<IFireDamageable> _overlapping = new HashSet<IFireDamageable>();
     private float _baseLightIntensity;   // the intensity authored on _light in the prefab
@@ -32,7 +32,7 @@ public class FireTrailCell : MonoBehaviour
 
     private void Awake()
     {
-        _collider = GetComponent<CircleCollider2D>();
+        _collider = GetComponent<BoxCollider2D>();
         _collider.isTrigger = true;
         _collider.enabled = false;   // stays off until Activate() places a real stamp
 
@@ -68,7 +68,9 @@ public class FireTrailCell : MonoBehaviour
             ? Quaternion.Euler(0f, 0f, Mathf.Atan2(surfaceNormal.y, surfaceNormal.x) * Mathf.Rad2Deg - 90f)
             : Quaternion.identity;
 
-        _collider.radius = radius;
+        // Width follows the controller's Cell Radius (half-width, so neighbours still overlap by spacing);
+        // height and offset stay as authored on the prefab's BoxCollider2D — a thin strip along the surface.
+        _collider.size = new Vector2(radius * 2f, _collider.size.y);
         _collider.enabled = true;
         SurfaceNormal = surfaceNormal;
         SpawnTime = Time.time;

@@ -27,4 +27,10 @@ public class SO_EnemyStats : ScriptableObject
     [Header("FX")]
     public GameObject deathParticlesPrefab;
     public GameObject hitParticlesPrefab;
+    [Tooltip("Flat-colour material swapped onto every sprite of this enemy for Hit Flash Duration when it takes a " +
+             "hit (M_HitFlash for a white flash). Leave empty for no flash.")]
+    public Material hitFlashMaterial;
+    [Tooltip("Seconds the flash lasts. Counts scaled game time, so it holds through a hit-stop freeze and then " +
+             "runs out this long after it.")]
+    public float hitFlashDuration = 0.08f;
 }
