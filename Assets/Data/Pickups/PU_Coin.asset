@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47455f1475c55c24488ae94d6200b001, type: 3}
+  m_Name: PU_Coin
+  m_EditorClassIdentifier: 
+  kind: 0
+  amount: 1
+  lifetime: 6
+  magnetizeToPlayer: 1
+  magnetizeRadius: 2
+  magnetizePower: 6
+  ignoreWallsForMagnetize: 0
+  wallLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  behavior: 2
+  movementSpeed: 2
+  movementDamping: 5
+  bounceAmount: 0.15
+  evadeRadius: 4
+  spawnFXPrefab: {fileID: 0}
+  pickupFXPrefab: {fileID: 0}
+  pickupSFX: {fileID: 0}
