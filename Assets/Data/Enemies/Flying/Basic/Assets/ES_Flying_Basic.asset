@@ -19,8 +19,8 @@ MonoBehaviour:
   damageDealtToPlayer: 1
   knockbackForce: 5
   knockbackDirection: {x: 1, y: 0.5}
-  deathDestroyDelay: 0.25
-  deathParticlesPrefab: {fileID: 0}
+  deathDestroyDelay: 0.1
+  deathParticlesPrefab: {fileID: 1993392080937107507, guid: 41dcdad6a027ee644953d8459fcfa4a8, type: 3}
   hitParticlesPrefab: {fileID: 0}
   hitFlashMaterial: {fileID: 2100000, guid: 2f8d6b4a9c1e4370b5a7d3e60c9f1b84, type: 2}
   hitFlashDuration: 0.08

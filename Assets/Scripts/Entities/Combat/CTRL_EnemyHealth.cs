@@ -19,6 +19,7 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     [SerializeField] private bool _isInvulnerable;   // mirrors the i-frame window, for the Inspector only
     private float _invulnerableUntil;                 // Time.time deadline of the post-hit i-frame window
     private bool _abilityInvulnerable;   // driven by abilities (e.g. Ability_Dash), independent of hit i-frames
+    private Vector2 _lastHitDirection = Vector2.up;    // see LastHitDirection
 
     [Header("Events")]
     public UnityEvent onDamaged = new UnityEvent();
@@ -34,6 +35,12 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     // ── Public accessors ─────────────────────────────────────────────────────
     public int  CurrentHP => _currentHP;
     public bool IsDead    => _currentHP <= 0;
+    /// <summary>Normalized knockback direction of the most recent hit that actually carried one —
+    /// e.g. CTRL_EnemyPickupDrop reads this on death to bias a pickup burst toward wherever the
+    /// killing blow was pushing (shoot left-to-right, drops pop out to the right). Stays at its
+    /// Vector2.up default for an enemy that's only ever taken non-directional damage (a burn tick,
+    /// which goes through ApplyBurnTick and never touches this).</summary>
+    public Vector2 LastHitDirection => _lastHitDirection;
     private bool InHitIFrames => Time.time < _invulnerableUntil;
     private bool IsInvulnerable => InHitIFrames || _abilityInvulnerable;
 
@@ -56,6 +63,10 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
         _rb           = rb;
         _board        = board;
         _currentHP    = stats.maxHP;
+        // Defensive: a pooled/reused enemy must never inherit a stuck invulnerability flag from
+        // its previous life (see the try/finally fix in Ability_Dash.DashCO for the actual source).
+        _abilityInvulnerable = false;
+        _invulnerableUntil   = 0f;
 
         if (stats.hitFlashMaterial != null)
         {
@@ -75,7 +86,11 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
 
     private void HandleContact(Collider2D other, bool isStay)
     {
-        if (IsDead) return;
+        if (IsDead)
+        {
+            Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} contact IGNORED — already dead (src={other.name})");
+            return;
+        }
         if (other.gameObject.layer != LayerMask.NameToLayer("PlayerDmg")) return;
 
         // Player ability hits (combo, charge/aim projectiles) — no stomp-style reaction; whether they
@@ -86,7 +101,11 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
         {
             // Dash invulnerability blocks the hit without using it up, so it lands once the dash ends.
             if (_abilityInvulnerable) { Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ability hit BLOCKED by dash invulnerability, src={other.name}"); return; }
-            if (abilityDamager.HasHit(this)) return;
+            if (abilityDamager.HasHit(this))
+            {
+                Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} ability hit IGNORED — already hit this swing, src={other.name}");
+                return;
+            }
 
             HitEffects fx = abilityDamager.effects;
             DamageInfo abilityInfo = new DamageInfo
@@ -138,6 +157,11 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     {
         if (IsDead || _abilityInvulnerable) return;
         if (!ignoreHitIFrames && InHitIFrames) return;
+
+        // Captured before ReduceHP (which may kill and fire onDeath this same call) so a death
+        // burst spawned from onDeath already sees the killing blow's direction.
+        if (info.knockback.sqrMagnitude > 0.0001f)
+            _lastHitDirection = info.knockback.normalized;
 
         // Impact feedback on every landed hit, killing blows included (so it goes before ReduceHP).
         _hitFlash?.Play();
@@ -209,7 +233,22 @@ public class CTRL_EnemyHealth : MonoBehaviour, IFireDamageable
     private void Die()
     {
         Debug.Log($"[EnemyHP] {name}#{GetInstanceID()} DIE");
-        onDeath?.Invoke();
+
+        // onDeath can have arbitrary listeners (CTRL_EnemyPickupDrop, etc.) — one throwing must
+        // never be able to skip the state transition and Destroy below it. Before this try/catch,
+        // an exception here left a permanent corpse: IsDead was already true (correctly rejecting
+        // every further hit, per the [EnemyHP] ... contact IGNORED — already dead logs), but the
+        // GameObject, its collider, and its Dead-state transition never happened, so it just stood
+        // there forever, un-killable and un-removable.
+        try
+        {
+            onDeath?.Invoke();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e, this);
+        }
+
         _stateMachine.TransitionTo("Dead");
         // Per-enemy delay (SO_EnemyStats.deathDestroyDelay) so the death animation has time to play
         Destroy(gameObject, _stats.deathDestroyDelay);

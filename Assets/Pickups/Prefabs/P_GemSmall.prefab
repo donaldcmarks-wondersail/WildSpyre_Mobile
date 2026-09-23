@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 1716056655017485893}
   - component: {fileID: 6555169429106455876}
   - component: {fileID: 1858700025090417159}
+  - component: {fileID: 7991039891694745098}
   m_Layer: 0
   m_Name: P_GemSmall
   m_TagString: Untagged
@@ -99,7 +100,7 @@ SpriteRenderer:
   m_SortingLayerID: 911430641
   m_SortingLayer: 2
   m_SortingOrder: 0
-  m_Sprite: {fileID: 858531650, guid: 1d37e72df93fd5f4da3f5308a6bd11b1, type: 3}
+  m_Sprite: {fileID: -5974420952469545205, guid: 1d37e72df93fd5f4da3f5308a6bd11b1, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -205,6 +206,32 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   _linecastSkin: 0.15
+--- !u!114 &7991039891694745098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3319567330580648757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 396e41a68e186c44884a0a5861ad1337, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _minDistance: 0.5
+  _maxDistance: 1.5
+  _minApexHeight: 0.75
+  _maxApexHeight: 1.5
+  _arcDuration: 0.35
+  _groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  _groundCheckStartHeight: 5
+  _groundCheckMaxDistance: 20
+  _bounceCount: 2
+  _firstBounceHeight: 0.2
+  _bounceDecay: 0.45
+  _bounceDuration: 0.16
 --- !u!1 &9180995095697816697
 GameObject:
   m_ObjectHideFlags: 0

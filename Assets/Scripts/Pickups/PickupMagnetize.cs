@@ -8,7 +8,9 @@ using UnityEngine;
 ///
 /// While active and in range it drives the transform directly; Pickup.Update checks
 /// IsMagnetizing and skips its own motion tick that frame so the two never fight over position.
-/// Optional — a Pickup with no PickupMagnetize on it just never magnetizes.
+/// Also defers to a PickupBurst on the same object while it's bursting (see its own Update) — a
+/// burst-spawned drop won't start magnetizing mid-toss. Optional — a Pickup with no
+/// PickupMagnetize on it just never magnetizes.
 /// </summary>
 public class PickupMagnetize : MonoBehaviour
 {
@@ -23,6 +25,7 @@ public class PickupMagnetize : MonoBehaviour
 
     private SO_PickupData _data;
     private Transform _player;
+    private PickupBurst _burst;
 
     public bool IsMagnetizing { get; private set; }
 
@@ -38,6 +41,9 @@ public class PickupMagnetize : MonoBehaviour
         Enabled = data != null && data.magnetizeToPlayer;
         IsMagnetizing = false;
 
+        if (_burst == null)
+            _burst = GetComponent<PickupBurst>();
+
         if (_player == null)
         {
             GameObject playerObj = GameObject.FindWithTag("Player");
@@ -48,6 +54,14 @@ public class PickupMagnetize : MonoBehaviour
 
     private void Update()
     {
+        // A burst in progress owns the transform — see Pickup.Update(), which defers its own
+        // idle motion the same way, and PickupBurst's own class comment.
+        if (_burst != null && _burst.IsBursting)
+        {
+            IsMagnetizing = false;
+            return;
+        }
+
         if (!Enabled || _data == null || _player == null)
         {
             IsMagnetizing = false;

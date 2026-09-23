@@ -20,6 +20,7 @@ public class Pickup : MonoBehaviour
 
     private IPickupMotion _motion;
     private PickupMagnetize _magnetize;
+    private PickupBurst _burst;
     private float _lifetimeTimer;
 
     /// <summary>Set by MNGR_PickupManager.Spawn() right after Instantiate. Null for a pickup
@@ -31,6 +32,7 @@ public class Pickup : MonoBehaviour
     private void Awake()
     {
         _magnetize = GetComponent<PickupMagnetize>();
+        _burst = GetComponent<PickupBurst>();
         _motion = CreateMotion(_data != null ? _data.behavior : PickupBehaviorType.Static);
     }
 
@@ -49,9 +51,14 @@ public class Pickup : MonoBehaviour
     {
         if (_data == null) return;
 
-        // Magnetize takes over the transform while it's pulling the pickup in; don't fight it
-        // with the idle motion the same frame.
-        if (_magnetize == null || !_magnetize.IsMagnetizing)
+        // Priority: a burst in progress owns the transform outright (PickupMagnetize defers to it
+        // too — see its own Update()); otherwise magnetize owns it while actively pulling; only
+        // once neither applies does the idle IPickupMotion get to touch position. Never more than
+        // one of these three writes transform.position in the same frame.
+        bool bursting = _burst != null && _burst.IsBursting;
+        bool magnetizing = !bursting && _magnetize != null && _magnetize.IsMagnetizing;
+
+        if (!bursting && !magnetizing)
             _motion.Tick(Time.deltaTime);
 
         if (_data.lifetime > 0f)
@@ -96,6 +103,14 @@ public class Pickup : MonoBehaviour
     public void SetSourcePrefab(Pickup prefab)
     {
         _sourcePrefab = prefab;
+    }
+
+    /// <summary>Called by whoever spawns this pickup (e.g. CTRL_EnemyPickupDrop) right after
+    /// MNGR_PickupManager.Spawn(), to play the burst-and-land intro instead of settling straight
+    /// into idle motion. No-op if this prefab has no PickupBurst component.</summary>
+    public void BeginBurst(Vector2 hitDirection)
+    {
+        _burst?.Begin(hitDirection);
     }
 
     private static IPickupMotion CreateMotion(PickupBehaviorType type)

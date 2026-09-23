@@ -191,6 +191,8 @@ GameObject:
   - component: {fileID: 5645219050010281961}
   - component: {fileID: 1191556604469236682}
   - component: {fileID: 1537940435834946569}
+  - component: {fileID: 7574186931404535505}
+  - component: {fileID: 6902135045305562212}
   m_Layer: 7
   m_Name: PF_FlyingGuard
   m_TagString: Enemy
@@ -397,6 +399,43 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7574186931404535505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5091410761855884387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a42d7b5031b9c8c4995e59d71ccbd2d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _currentHP: 0
+  _isInvulnerable: 0
+  onDamaged:
+    m_PersistentCalls:
+      m_Calls: []
+  onDeath:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &6902135045305562212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5091410761855884387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18f7c4ce8a41eb439b001d60ae08b95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _drops:
+  - prefab: {fileID: 6555169429106455876, guid: ce9c1d6cf080875418698c9908b2da87, type: 3}
+    dropChance: 1
+    minCount: 3
+    maxCount: 5
 --- !u!1 &6423976660541035121
 GameObject:
   m_ObjectHideFlags: 0
