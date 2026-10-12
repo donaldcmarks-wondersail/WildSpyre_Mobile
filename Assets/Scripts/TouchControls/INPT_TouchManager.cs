@@ -8,6 +8,8 @@ public class INPT_TouchManager : MonoBehaviour
     [Header("PlayerVariables")]
     public GameObject player;
     private CTRL_PlayerPlatformer playerCtrl;
+    private CTRL_PlayerSlingImpact slingImpact;
+    private CTRL_PlayerGroundPound groundPound;
 
     [Header("Game Objects/Components")]
     public Camera cam;
@@ -69,6 +71,8 @@ public class INPT_TouchManager : MonoBehaviour
     void Start()
     {
         playerCtrl = player.GetComponent<CTRL_PlayerPlatformer>();
+        slingImpact = player.GetComponent<CTRL_PlayerSlingImpact>();
+        groundPound = player.GetComponent<CTRL_PlayerGroundPound>();
         LRMaterial.color = Color.yellow;
         aimLinePos[0] = aimLine.gameObject.transform.position;
         swipeAreaImage.color = Color.yellow;
@@ -159,15 +163,34 @@ public class INPT_TouchManager : MonoBehaviour
                     Instantiate(playerCtrl.particleFXVars.slingFireParticles, playerCtrl.transform.position, aimReticleRotNegative);
                     playerCtrl.resetPlayerPhysics();
                     playerCtrl.resetTimescale();
-                    playerCtrl.rb.AddForce(playerCtrl.slingVars.slingForce * (-slingDirection.normalized));
+
+                    // The actual launch direction — slingshot-style, opposite the pull-back drag.
+                    Vector2 launchDir = -slingDirection.normalized;
+                    playerCtrl.rb.AddForce(playerCtrl.slingVars.slingForce * launchDir);
                     playerCtrl.slingVars.canSling = false;
+
+                    // Fires exactly here, on release past the threshold with canSling true — never
+                    // on press/drag, never on a too-small release that just drops back to Platformer.
+                    slingImpact?.Fire(launchDir);
+
+                    // Captures THIS launch's direction — ground pound judges "was this aimed into
+                    // the ground" against this snapshot, never against live/current velocity, which
+                    // bouncing or rolling can drift far from how the sling was actually aimed.
+                    groundPound?.NotifySlingLaunched(launchDir);
                 }
             }
             else
             {
                 playerCtrl.StopCoroutine("startSlingSlowMoCO");
                 playerCtrl.resetTimescale();
-                playerCtrl.setStatePlatform();
+
+                // A tap here normally just drops back to Platformer control — but if the player
+                // slung nearly straight down into qualifying ground (checked by groundPound itself,
+                // either right now or within its own buffer window), this is a ground pound instead.
+                // TryExecute() puts the player into the GroundPound state itself when it fires, so
+                // setStatePlatform() below only runs when it doesn't.
+                if (groundPound == null || !groundPound.TryExecute())
+                    playerCtrl.setStatePlatform();
             }
         }
 

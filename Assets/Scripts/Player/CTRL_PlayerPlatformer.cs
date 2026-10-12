@@ -316,6 +316,10 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
                 CheckLedgeClimb();
                 getInput();
                 break;
+            case playerControlState.GroundPound:
+                // Empty on purpose, same as Dead/LevelComplete above — GroundPound is a no-input
+                // lockout state (see CTRL_PlayerGroundPound), not a case someone forgot to wire up.
+                break;
         }
     }
 
@@ -1074,6 +1078,17 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         trailVars.slingTrailRenderer.enabled = false;
     }
 
+    /// <summary>Ground pound's landing state — same physical/visual reset as a normal Sling→Platformer
+    /// transition (reuses setStatePlatform() for exactly that), just re-tagged as GroundPound so
+    /// FixedUpdate's switch locks out movement input for CTRL_PlayerGroundPound's pause duration.
+    /// CTRL_PlayerGroundPound itself is responsible for calling setStatePlatform() again once that
+    /// pause elapses — this method only ever enters the state, never schedules the way out of it.</summary>
+    public void setStateGroundPound()
+    {
+        setStatePlatform();
+        PlayerState = playerControlState.GroundPound;
+    }
+
     public void setStateSling()
     {
         stopSkid();
@@ -1285,6 +1300,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         LevelComplete,
         OnLedge,
         OnWall,
+        GroundPound,
     }
 
     public bool Flipped

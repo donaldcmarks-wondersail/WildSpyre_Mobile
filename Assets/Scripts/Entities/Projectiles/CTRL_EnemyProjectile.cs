@@ -15,7 +15,7 @@ using UnityEngine;
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
-public class CTRL_EnemyProjectile : MonoBehaviour
+public class CTRL_EnemyProjectile : MonoBehaviour, IThrownProjectile
 {
     [Header("Projectile Settings")]
     [SerializeField] private float _lifetimeSeconds = 5f;

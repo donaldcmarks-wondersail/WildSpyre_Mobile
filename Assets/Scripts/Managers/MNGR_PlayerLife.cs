@@ -62,6 +62,21 @@ public class MNGR_PlayerLife : MonoBehaviour
     [Header("Player Respawn Variables")]
     public PlayerRespawnVariables playerRespawnVars;
 
+    // Separate from playerDmgVariables.invulnerable (the post-hit i-frame window, timer-driven and
+    // owned entirely by setInvul_TakeDamageCO) so an ability-granted window — e.g.
+    // CTRL_PlayerSlingImpact's brief damage-dealing/damage-immune window at the start of a sling —
+    // can't stomp or get stomped by the hit-reaction one. Same pattern as CTRL_EnemyHealth's
+    // InHitIFrames/_abilityInvulnerable split.
+    private bool _abilityInvulnerable;
+
+    /// <summary>True while either the post-hit i-frame window or an ability-granted window (see
+    /// SetAbilityInvulnerable) is active. Use this instead of reading playerDmgVariables.invulnerable
+    /// directly so the two sources never silently overwrite each other.</summary>
+    public bool IsInvulnerable => playerDmgVariables.invulnerable || _abilityInvulnerable;
+
+    /// <summary>Lets an ability (e.g. CTRL_PlayerSlingImpact) grant invulnerability for its own
+    /// duration, independent of the post-hit i-frame window.</summary>
+    public void SetAbilityInvulnerable(bool on) => _abilityInvulnerable = on;
 
     // Start is called before the first frame update
     void Start()
@@ -143,7 +158,7 @@ public class MNGR_PlayerLife : MonoBehaviour
         // Enemy body contact damage now flows through CTRL_EnemyDamager (a trigger,
         // caught below in OnTriggerEnter2D) — PlayerCol and EnemyCol no longer
         // physically collide, so no "Enemy" tag case is reachable here any more.
-        if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
+        if (collision.gameObject.tag == "DamagePlayer" && !IsInvulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
             playerLoseLife(collision.transform.position);
         }
@@ -151,7 +166,7 @@ public class MNGR_PlayerLife : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.gameObject.tag == "DamagePlayer" && !playerDmgVariables.invulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
+        if (collision.gameObject.tag == "DamagePlayer" && !IsInvulnerable && componentRefs.playerCtrl.playerState != CTRL_PlayerPlatformer.playerControlState.Dead)
         {
             playerLoseLife(collision.transform.position);
         }

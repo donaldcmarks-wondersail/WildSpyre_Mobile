@@ -4,7 +4,9 @@ using UnityEngine;
 /// <summary>
 /// Instantiates a projectile prefab and launches it toward the player.
 /// Set arcedShot = true and arcAngleDeg to add a lofted arc to the trajectory.
-/// The projectile prefab must have a CTRL_EnemyProjectile component.
+/// The projectile prefab must have an IThrownProjectile component — CTRL_EnemyProjectile (plain
+/// ballistic flight) or CTRL_SurfaceProjectile (sticks to and crawls along ground/wall/ceiling
+/// after its first surface contact) both qualify.
 /// </summary>
 public class Ability_ThrowProjectile : IEnemyAbility
 {
@@ -57,7 +59,10 @@ public class Ability_ThrowProjectile : IEnemyAbility
             Quaternion.identity
         );
 
-        CTRL_EnemyProjectile projCtrl = proj.GetComponent<CTRL_EnemyProjectile>();
+        // IThrownProjectile, not the concrete CTRL_EnemyProjectile type, so this one ability can
+        // fire either a plain ballistic projectile or a CTRL_SurfaceProjectile off the same prefab
+        // field — whichever component the prefab actually has.
+        IThrownProjectile projCtrl = proj.GetComponent<IThrownProjectile>();
         if (projCtrl != null)
             projCtrl.Launch(launchDir, _config.launchSpeed);
     }

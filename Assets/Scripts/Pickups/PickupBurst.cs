@@ -23,6 +23,12 @@ public class PickupBurst : MonoBehaviour
     [Tooltip("Horizontal distance from the spawn point, randomized per pickup so a cluster fans out.")]
     [SerializeField] private float _minDistance = 0.5f;
     [SerializeField] private float _maxDistance = 1.5f;
+    [Tooltip("How strongly the burst favors the hit direction, 0-1. 1 = every drop goes toward the " +
+             "hit side, same as before. 0 = hit direction is ignored entirely — pure coin-flip " +
+             "left/right. In between (the default), most drops lean toward the hit side but the " +
+             "spread is wide enough that some land dead-center or even the opposite way, same as a " +
+             "real burst of debris wouldn't line up perfectly.")]
+    [SerializeField, Range(0f, 1f)] private float _directionBias = 0.5f;
     [SerializeField] private float _minApexHeight = 0.75f;
     [SerializeField] private float _maxApexHeight = 1.5f;
     [SerializeField] private float _arcDuration = 0.35f;
@@ -66,8 +72,16 @@ public class PickupBurst : MonoBehaviour
         _startPos = transform.position;
         _elapsed = 0f;
 
-        float lean = Mathf.Abs(hitDirection.x) > 0.01f ? Mathf.Sign(hitDirection.x) : (Random.value < 0.5f ? -1f : 1f);
-        float horizontalOffset = lean * Random.Range(_minDistance, _maxDistance);
+        float biasSign = Mathf.Abs(hitDirection.x) > 0.01f ? Mathf.Sign(hitDirection.x) : (Random.value < 0.5f ? -1f : 1f);
+
+        // Two summed uniforms (a triangular distribution, -1..1) instead of one flat random pick,
+        // so most rolls land nearer the middle and extremes are rarer — feels less like a fan and
+        // more like debris. Blended toward biasSign by Direction Bias: at 1 this collapses to the
+        // old hard left/right-of-hit-direction behavior; at 0 the hit direction is ignored entirely.
+        float spread = (Random.Range(-1f, 1f) + Random.Range(-1f, 1f)) * 0.5f;
+        float leanStrength = Mathf.Lerp(spread, biasSign, _directionBias);
+
+        float horizontalOffset = leanStrength * Random.Range(_minDistance, _maxDistance);
         _apexHeight = Random.Range(_minApexHeight, _maxApexHeight);
 
         Vector2 targetXY = _startPos + new Vector2(horizontalOffset, 0f);

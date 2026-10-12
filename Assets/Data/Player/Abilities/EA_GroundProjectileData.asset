@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ea48caeb0ba9c64381dd4c06d821b8e, type: 3}
+  m_Name: EA_GroundProjectileData
+  m_EditorClassIdentifier: 
+  speed: 6
+  damage: 1
+  lifetimeSeconds: 6
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 8
+  groundSupport:
+    enabled: 1
+    minAngle: 0
+    maxAngle: 45
+  wallSupport:
+    enabled: 1
+    minAngle: 45
+    maxAngle: 135
+  ceilingSupport:
+    enabled: 0
+    minAngle: 135
+    maxAngle: 180
+  surfaceProbeAheadDistance: 0.15
+  surfaceProbeDistance: 0.6
+  surfaceSkin: 0.05
+  maxTransitionAngleDelta: 110
+  rotationSmoothSpeed: 540
+  orientationOffsetDegrees: -90
+  detachBehavior: 1
+  hitParticlesPrefab: {fileID: 0}
