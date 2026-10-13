@@ -40,6 +40,15 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     // last set — same "rebuild from the original, never from the previous frame's result" principle
     // as the trail-gradient scaling elsewhere in this project.
     private Vector3 _baseScale;
+    // Which way the X-flip in UpdateFacingScale() last pointed — kept separately so ApplyScale() can
+    // rebuild localScale every frame from _baseScale × Scale Curve without losing the facing.
+    private float _facingXSign = 1f;
+
+    // Fire trail — only active when Leave Fire Trail is on AND a spawner handed us an emitter via
+    // SetFireTrail() (a runtime-spawned prefab can't hold that scene reference itself).
+    private FireTrailEmitterBase _fireTrailEmitter;
+    private FireTrailController _trailRun;
+    private Vector2 _lastStampPos;
 
     private void Awake()
     {
@@ -64,6 +73,20 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     private void Update()
     {
         UpdateSpriteFrame();
+        ApplyScale();
+    }
+
+    /// <summary>Rebuilds localScale from the prefab's authored scale × Scale Curve at the current
+    /// lifetime progress, keeping the current facing flip. Runs every frame in every state, so the
+    /// curve applies during free flight too, not just while crawling.</summary>
+    private void ApplyScale()
+    {
+        if (_data == null) return;
+
+        float multiplier = Mathf.Max(0f, _data.scaleCurve.Evaluate(LifetimeProgress01()));
+        transform.localScale = new Vector3(Mathf.Abs(_baseScale.x) * _facingXSign * multiplier,
+                                           _baseScale.y * multiplier,
+                                           _baseScale.z);
     }
 
     /// <summary>0 at spawn, 1 at Lifetime Seconds — the shared normalized time-domain both
@@ -96,6 +119,18 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     {
         _rb.linearVelocity = direction.normalized * speed;
         FaceDirection(direction);
+    }
+
+    /// <summary>Optional, called right after Launch() by spawners that want this projectile to lay
+    /// a fire trail (still gated by Leave Fire Trail on the data asset).</summary>
+    public void SetFireTrail(FireTrailEmitterBase emitter)
+    {
+        _fireTrailEmitter = emitter;
+    }
+
+    private void OnDestroy()
+    {
+        EndFireTrail();
     }
 
     private void FixedUpdate()
@@ -209,6 +244,8 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
         Vector2 newPos = onSurface + _normal * _data.surfaceSkin + _lastTangentDir * effectiveSpeed * Time.fixedDeltaTime;
         transform.position = new Vector3(newPos.x, newPos.y, transform.position.z);
 
+        UpdateFireTrail(newPos - _normal * _data.surfaceSkin, hit.collider.gameObject.layer);
+
         EaseRotationToward(_normal);
         UpdateFacingScale();
     }
@@ -218,9 +255,47 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     private float CurrentCrawlSpeed() =>
         _data.speed * Mathf.Max(0f, _data.velocityCurve.Evaluate(LifetimeProgress01()));
 
+    // ── Fire trail ───────────────────────────────────────────────────────────
+    /// <summary>Stamps fire at surfacePoint every Fire Trail Spacing units crawled, while the surface
+    /// under it is on Fire Trail Mask. Crawling onto a non-trail layer ends the current run, so
+    /// coming back onto a trail layer starts a fresh, disconnected one — same as the player's trail
+    /// splitting per platform.</summary>
+    private void UpdateFireTrail(Vector2 surfacePoint, int surfaceLayer)
+    {
+        if (!_data.leaveFireTrail || _fireTrailEmitter == null) return;
+
+        int mask = _data.fireTrailMask.value != 0 ? _data.fireTrailMask.value : _data.groundMask.value;
+        if (((1 << surfaceLayer) & mask) == 0)
+        {
+            EndFireTrail();
+            return;
+        }
+
+        if (_trailRun != null && Vector2.Distance(surfacePoint, _lastStampPos) < _data.fireTrailSpacing)
+            return;
+
+        if (_trailRun == null)
+        {
+            _trailRun = _fireTrailEmitter.CheckOutExternalRun();
+            if (_trailRun == null) return;
+        }
+
+        _trailRun.PlaceStamp(surfacePoint, _normal, alignToNormal: true);
+        _lastStampPos = surfacePoint;
+    }
+
+    /// <summary>Hands the current run back so it burns out and returns to the emitter's pool on its own.</summary>
+    private void EndFireTrail()
+    {
+        if (_trailRun == null) return;
+        _trailRun.Release();
+        _trailRun = null;
+    }
+
     private void Detach()
     {
         _state = State.Detached;
+        EndFireTrail();
 
         switch (_data.detachBehavior)
         {
@@ -273,7 +348,7 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     private void UpdateFacingScale()
     {
         bool movingAgainstLocalRight = Vector2.Dot(transform.right, _lastTangentDir) < 0f;
-        float xSign = movingAgainstLocalRight ? -1f : 1f;
-        transform.localScale = new Vector3(Mathf.Abs(_baseScale.x) * xSign, _baseScale.y, _baseScale.z);
+        _facingXSign = movingAgainstLocalRight ? -1f : 1f;
+        ApplyScale();
     }
 }

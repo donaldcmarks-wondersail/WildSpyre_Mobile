@@ -20,7 +20,7 @@ MonoBehaviour:
   groundPoundBuffer: 0.15
   groundPoundPauseTime: 0.4
   animTrigger: GroundPound
-  hitStopDuration: 0.12
+  hitStopDuration: 0.04
   shakeStrength: 0.75
   shakeDuration: 0.5
   impactParticlesPrefab: {fileID: 0}

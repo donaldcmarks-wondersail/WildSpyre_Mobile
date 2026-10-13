@@ -37,6 +37,10 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
 {
     [SerializeField] private SO_PlayerAbility_GroundPound _data;
     [SerializeField] private CTRL_PlayerPlatformer _playerCtrl;
+    [Tooltip("Handed to every ground projectile spawned, so ones whose data has Leave Fire Trail on " +
+             "can lay fire from this emitter's pool. Auto-found on the player (or its children) if " +
+             "left empty.")]
+    [SerializeField] private FireTrailEmitter _fireTrailEmitter;
 
     private bool _currentSlingEligible;      // did THIS sling's launch vector pass the down-check?
     // Only the FIRST ground contact after a launch is ever allowed to open the buffer window — set
@@ -54,6 +58,12 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
     private Vector2 _lastContactPoint;
     private bool _pauseActive;
     private float _pauseTimer;
+
+    private void Awake()
+    {
+        if (_fireTrailEmitter == null)
+            _fireTrailEmitter = GetComponentInChildren<FireTrailEmitter>();
+    }
 
     private void Update()
     {
@@ -257,6 +267,10 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
         }
 
         thrown.Launch(direction, _data.projectileLaunchSpeed);
+
+        CTRL_SurfaceProjectile surfaceProj = proj.GetComponent<CTRL_SurfaceProjectile>();
+        if (surfaceProj != null)
+            surfaceProj.SetFireTrail(_fireTrailEmitter);
         Debug.Log($"[GroundPound] SpawnGroundProjectile() launched '{proj.name}' direction={direction} " +
                   $"speed={_data.projectileLaunchSpeed} at {spawnPos} (impact point was {_lastContactPoint})", proj);
     }

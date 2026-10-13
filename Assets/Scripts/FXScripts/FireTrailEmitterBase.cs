@@ -141,6 +141,15 @@ public abstract class FireTrailEmitterBase : MonoBehaviour
         controller.Release();
     }
 
+    /// <summary>
+    /// Checks out a controller from this emitter's pool for a continuous run owned by someone
+    /// else (e.g. a crawling CTRL_SurfaceProjectile laying its own trail). The caller feeds it
+    /// stamps via PlaceStamp() and MUST call Release() on it when the run ends — after that it
+    /// burns out and returns to this pool exactly like one of this emitter's own runs. Separate
+    /// from _currentController, so it never interrupts or merges with this emitter's own trail.
+    /// </summary>
+    public FireTrailController CheckOutExternalRun() => GetPooledController();
+
     // ── Controller pooling ───────────────────────────────────────────────────
     protected FireTrailController GetPooledController()
     {

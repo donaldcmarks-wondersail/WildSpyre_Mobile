@@ -107,6 +107,11 @@ public class SO_SurfaceProjectileData : ScriptableObject
              "1 = about to self-destruct), Y is the multiplier (1 = full configured Speed, 0 = " +
              "stopped, >1 = faster than configured). Flat at 1 for the old constant-speed behavior.")]
     public AnimationCurve velocityCurve = AnimationCurve.Constant(0f, 1f, 1f);
+    [Tooltip("Multiplies the prefab's own authored scale over the course of the projectile's whole " +
+             "life (free flight and crawling). X axis is 0-1 progress through Lifetime Seconds; Y is " +
+             "the multiplier (1 = prefab's scale, 0.5 = half size, 2 = double). Scales the collider " +
+             "too, so its hitbox grows/shrinks with it. Flat at 1 for no change.")]
+    public AnimationCurve scaleCurve = AnimationCurve.Constant(0f, 1f, 1f);
     [Tooltip("Picks which entry of Sprite Frames below is shown, over the course of the projectile's " +
              "whole life (not just while crawling). X axis is 0-1 progress through Lifetime Seconds; " +
              "Y is normalized 0-1 across the Sprite Frames list — 0 = first frame, 1 = last frame, " +
@@ -118,6 +123,19 @@ public class SO_SurfaceProjectileData : ScriptableObject
              "the prefab (CTRL_SurfaceProjectile auto-finds one on its own GameObject if not wired " +
              "up explicitly). Leave empty to skip sprite-swapping entirely.")]
     public Sprite[] spriteFrames;
+
+    [Header("Fire Trail")]
+    [Tooltip("Lay a fire trail behind it while crawling along a surface. Only works when whatever " +
+             "spawned it handed it a fire trail emitter (e.g. CTRL_PlayerGroundPound passes the " +
+             "player's ground FireTrailEmitter) — the stamps come out of that emitter's pool and use " +
+             "its prefab, so they look and burn exactly like the player's own ground trail.")]
+    public bool leaveFireTrail = false;
+    [Tooltip("Which surface layers it actually leaves fire on while crawling. Falls back to Ground " +
+             "Mask above if left as Nothing.")]
+    public LayerMask fireTrailMask;
+    [Tooltip("World units of crawling between stamps. Match it to the ground FireTrailEmitter's own " +
+             "Spawn Interval so the cells line up the same way the player's trail does.")]
+    public float fireTrailSpacing = 0.35f;
 
     [Header("FX")]
     public GameObject hitParticlesPrefab;
