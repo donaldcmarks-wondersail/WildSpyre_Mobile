@@ -74,15 +74,17 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     private float LifetimeProgress01() =>
         Mathf.Clamp01((Time.time - _spawnTime) / Mathf.Max(0.0001f, _data.lifetimeSeconds));
 
-    /// <summary>Applies Sprite Curve: evaluates it at the current lifetime progress, rounds to the
+    /// <summary>Applies Sprite Curve: evaluates it at the current lifetime progress as a normalized
+    /// 0-1 value (0 = first frame, 1 = last frame), scales that across the frame list, rounds to the
     /// nearest frame index, and only touches the renderer when that index actually changes.</summary>
     private void UpdateSpriteFrame()
     {
         if (_data == null || _spriteRenderer == null) return;
         if (_data.spriteFrames == null || _data.spriteFrames.Length == 0) return;
 
-        int index = Mathf.Clamp(Mathf.RoundToInt(_data.spriteCurve.Evaluate(LifetimeProgress01())),
-            0, _data.spriteFrames.Length - 1);
+        int lastIndex = _data.spriteFrames.Length - 1;
+        float normalized = Mathf.Clamp01(_data.spriteCurve.Evaluate(LifetimeProgress01()));
+        int index = Mathf.RoundToInt(normalized * lastIndex);
 
         if (index == _lastSpriteIndex) return;
         _lastSpriteIndex = index;
@@ -194,17 +196,27 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
         _normal = hit.normal;
         _lastTangentDir = TangentContinuing(_normal, _lastTangentDir);
 
-        // Velocity Curve multiplies the configured crawl Speed over the course of the projectile's
-        // life — flat at 1 (the default curve) reproduces the old constant-speed behavior exactly.
-        float speedMultiplier = Mathf.Max(0f, _data.velocityCurve.Evaluate(LifetimeProgress01()));
-        float effectiveSpeed = _data.speed * speedMultiplier;
+        // Snap onto the surface by projecting the CURRENT position onto the hit surface's line, not
+        // by starting from hit.point itself — hit.point sits Surface Probe Ahead Distance in front of
+        // us, so building from it advanced the projectile by that distance every physics step on top
+        // of its real speed (0.15 per step = ~7.5 units/sec), which is why it never stopped even with
+        // Velocity Curve at 0. The ahead-probe is still what detects the next face at corners.
+        Vector2 pos = transform.position;
+        Vector2 onSurface = pos - Vector2.Dot(pos - hit.point, _normal) * _normal;
 
-        Vector2 newPos = hit.point + _normal * _data.surfaceSkin + _lastTangentDir * effectiveSpeed * Time.fixedDeltaTime;
+        float effectiveSpeed = CurrentCrawlSpeed();
+
+        Vector2 newPos = onSurface + _normal * _data.surfaceSkin + _lastTangentDir * effectiveSpeed * Time.fixedDeltaTime;
         transform.position = new Vector3(newPos.x, newPos.y, transform.position.z);
 
         EaseRotationToward(_normal);
         UpdateFacingScale();
     }
+
+    /// <summary>Velocity Curve multiplies the configured crawl Speed over the course of the
+    /// projectile's life — flat at 1 (the default curve) reproduces constant-speed behavior.</summary>
+    private float CurrentCrawlSpeed() =>
+        _data.speed * Mathf.Max(0f, _data.velocityCurve.Evaluate(LifetimeProgress01()));
 
     private void Detach()
     {
@@ -217,7 +229,7 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
                 break;
             case SurfaceDetachBehavior.FreeFall:
                 _rb.gravityScale = 1f;
-                _rb.linearVelocity = _lastTangentDir * _data.speed;
+                _rb.linearVelocity = _lastTangentDir * CurrentCrawlSpeed();
                 break;
             case SurfaceDetachBehavior.Stop:
                 _rb.linearVelocity = Vector2.zero;

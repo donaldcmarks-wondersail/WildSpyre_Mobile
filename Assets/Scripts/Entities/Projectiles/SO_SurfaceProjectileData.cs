@@ -109,12 +109,11 @@ public class SO_SurfaceProjectileData : ScriptableObject
     public AnimationCurve velocityCurve = AnimationCurve.Constant(0f, 1f, 1f);
     [Tooltip("Picks which entry of Sprite Frames below is shown, over the course of the projectile's " +
              "whole life (not just while crawling). X axis is 0-1 progress through Lifetime Seconds; " +
-             "Y is read directly as a frame index — e.g. a key at (0, 0) and (0.5, 3) steps/eases " +
-             "from frame 0 to frame 3 over the first half of its life. The raw output is rounded to " +
-             "the nearest whole number and clamped into a valid index, so you can key it at exact " +
-             "integers for a hard cut between frames or let it ease through fractional values for " +
-             "however that reads once rounded. No effect if Sprite Frames is empty.")]
-    public AnimationCurve spriteCurve = AnimationCurve.Constant(0f, 1f, 0f);
+             "Y is normalized 0-1 across the Sprite Frames list — 0 = first frame, 1 = last frame, " +
+             "values in between scale across the list and round to the nearest frame (clamped to " +
+             "0-1 first). Independent of how many frames there are, so adding/removing frames never " +
+             "needs the curve re-keyed. No effect if Sprite Frames is empty.")]
+    public AnimationCurve spriteCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [Tooltip("Frames Sprite Curve above swaps between, by rounded index. Needs a SpriteRenderer on " +
              "the prefab (CTRL_SurfaceProjectile auto-finds one on its own GameObject if not wired " +
              "up explicitly). Leave empty to skip sprite-swapping entirely.")]

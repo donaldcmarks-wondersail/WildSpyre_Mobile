@@ -13,6 +13,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
     public SpriteRenderer playerSpriteRend;
     public Animator animatorUI;
     private MNGR_LevelManager levelManager;
+    private CTRL_PlayerGroundPound groundPound;
     [HideInInspector] public bool _isSlinging = false;
     private Coroutine _damagerReactionCoroutine;
     
@@ -276,6 +277,7 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         stateVars.spriteScale_Platform = playerSpriteRend.gameObject.transform.localScale;
         stateVars.capColSize_Platform = playerCollider.size;
         playerLifeManager = this.GetComponent<MNGR_PlayerLife>();
+        groundPound = this.GetComponent<CTRL_PlayerGroundPound>();
         levelManager = GameObject.FindGameObjectWithTag("LevelManager").GetComponent<MNGR_LevelManager>();
     }
 
@@ -284,6 +286,13 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
     {
         evaluateJumpTimers();
         evaluateAnimator();
+
+        // Checked here in Update rather than in getKeyboardInput() — that only runs from FixedUpdate's
+        // Platformer case, and GetKeyDown can be missed entirely when polled from FixedUpdate.
+        if (inputVars.getKeyboardInput && PlayerState == playerControlState.Sling && Input.GetKeyDown(KeyCode.Space))
+        {
+            exitSling();
+        }
     }
 
     private void FixedUpdate()
@@ -1076,6 +1085,19 @@ public class CTRL_PlayerPlatformer : MonoBehaviour
         playerCollider.sharedMaterial = physMats.PMAT_playerStatic;
         resetPlayerPhysics();
         trailVars.slingTrailRenderer.enabled = false;
+    }
+
+    /// <summary>Leaves Sling the same way a sling joystick tap does (INPT_TouchManager.ExecuteSling()
+    /// and the keyboard spacebar both route here) — if the player slung nearly straight down into
+    /// qualifying ground, groundPound.TryExecute() turns this into a ground pound and puts the player
+    /// into the GroundPound state itself, so setStatePlatform() only runs when it doesn't.</summary>
+    public void exitSling()
+    {
+        StopCoroutine("startSlingSlowMoCO");
+        resetTimescale();
+
+        if (groundPound == null || !groundPound.TryExecute())
+            setStatePlatform();
     }
 
     /// <summary>Ground pound's landing state — same physical/visual reset as a normal Sling→Platformer

@@ -181,16 +181,11 @@ public class INPT_TouchManager : MonoBehaviour
             }
             else
             {
-                playerCtrl.StopCoroutine("startSlingSlowMoCO");
-                playerCtrl.resetTimescale();
-
                 // A tap here normally just drops back to Platformer control — but if the player
                 // slung nearly straight down into qualifying ground (checked by groundPound itself,
                 // either right now or within its own buffer window), this is a ground pound instead.
-                // TryExecute() puts the player into the GroundPound state itself when it fires, so
-                // setStatePlatform() below only runs when it doesn't.
-                if (groundPound == null || !groundPound.TryExecute())
-                    playerCtrl.setStatePlatform();
+                // exitSling() handles both, and is shared with the keyboard spacebar path.
+                playerCtrl.exitSling();
             }
         }
 

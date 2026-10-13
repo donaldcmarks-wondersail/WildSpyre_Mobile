@@ -96,7 +96,7 @@ AnimationClip:
     curve:
     - time: 0
       value: {fileID: 21300000, guid: 3b53cf531a1436d48922dec1e2013e11, type: 3}
-    - time: 0.8333333
+    - time: 0.2777778
       value: {fileID: 21300000, guid: 3b53cf531a1436d48922dec1e2013e11, type: 3}
     attribute: m_Sprite
     path: PlayerArt/SPRT_Player
@@ -163,7 +163,7 @@ AnimationClip:
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.8888889
+    m_StopTime: 0.33333334
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
