@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Projectile that flies freely until it first touches a surface, then sticks to and crawls along
@@ -26,10 +27,15 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     [Tooltip("Where Sprite Curve's frames get applied. Auto-found on this GameObject in Awake if " +
              "left empty.")]
     [SerializeField] private SpriteRenderer _spriteRenderer;
+    [Tooltip("Dimmed by Light Intensity Curve over the projectile's life. Auto-found on this " +
+             "GameObject (or its children) in Awake if left empty. Optional — fine to leave both " +
+             "this and the data asset's curve unused.")]
+    [SerializeField] private Light2D _light;
 
     private enum State { FreeFlight, Attached, Detached }
 
     private Rigidbody2D _rb;
+    private Collider2D _collider;
     private State _state;
     private Vector2 _normal = Vector2.up;
     private Vector2 _lastTangentDir = Vector2.right;
@@ -43,6 +49,9 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     // Which way the X-flip in UpdateFacingScale() last pointed — kept separately so ApplyScale() can
     // rebuild localScale every frame from _baseScale × Scale Curve without losing the facing.
     private float _facingXSign = 1f;
+    // Registered once in Awake, same "always rebuild from the original" principle as _baseScale —
+    // Light Intensity Curve multiplies THIS, never the light's own last-set value.
+    private float _baseLightIntensity;
 
     // Fire trail — only active when Leave Fire Trail is on AND a spawner handed us an emitter via
     // SetFireTrail() (a runtime-spawned prefab can't hold that scene reference itself).
@@ -57,10 +66,16 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
         _rb = GetComponent<Rigidbody2D>();
         _rb.gravityScale = 0f;
 
-        GetComponent<Collider2D>().isTrigger = true;
+        _collider = GetComponent<Collider2D>();
+        _collider.isTrigger = true;
 
         if (_spriteRenderer == null)
             _spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (_light == null)
+            _light = GetComponentInChildren<Light2D>();
+        if (_light != null)
+            _baseLightIntensity = _light.intensity;
 
         _baseScale = transform.localScale;
         _state = State.FreeFlight;
@@ -74,6 +89,16 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     {
         UpdateSpriteFrame();
         ApplyScale();
+        ApplyLightIntensity();
+    }
+
+    /// <summary>Light Intensity Curve multiplies the registered starting intensity at the current
+    /// lifetime progress — a straight multiplier of the starting value, not additive, since this
+    /// light has no separate "base" the way CTRL_PlayerSlingImpact's does.</summary>
+    private void ApplyLightIntensity()
+    {
+        if (_data == null || _light == null) return;
+        _light.intensity = _baseLightIntensity * Mathf.Max(0f, _data.lightIntensityCurve.Evaluate(LifetimeProgress01()));
     }
 
     /// <summary>Rebuilds localScale from the prefab's authored scale × Scale Curve at the current
@@ -119,6 +144,36 @@ public class CTRL_SurfaceProjectile : MonoBehaviour, IThrownProjectile
     {
         _rb.linearVelocity = direction.normalized * speed;
         FaceDirection(direction);
+        TryAttachImmediately();
+    }
+
+    /// <summary>Checks for ground already overlapping this projectile's own collider right at spawn
+    /// and attaches to it the same frame if found, instead of only reacting to OnTriggerEnter2D on
+    /// the next physics step. Without this, anything spawned already resting on/near a surface (e.g.
+    /// CTRL_PlayerGroundPound's ground projectiles) shows one visible frame facing its free-flight
+    /// launch direction — FaceDirection(direction) above, oriented for travel, not for the surface —
+    /// before snapping to the correct surface-normal rotation once the reactive trigger fires. This
+    /// runs the exact same attach logic OnTriggerEnter2D's FreeFlight branch does, just synchronously
+    /// here first so that gap never renders.</summary>
+    private void TryAttachImmediately()
+    {
+        if (_data == null || _state != State.FreeFlight) return;
+
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.SetLayerMask(_data.groundMask);
+        filter.useTriggers = true;
+
+        Collider2D[] results = new Collider2D[4];
+        int count = Physics2D.OverlapCollider(_collider, filter, results);
+        if (count == 0) return;
+
+        Vector2 point = results[0].ClosestPoint(transform.position);
+        Vector2 normal = (Vector2)transform.position - point;
+        normal = normal.sqrMagnitude > 0.0001f
+            ? normal.normalized
+            : (_rb.linearVelocity.sqrMagnitude > 0.0001f ? -_rb.linearVelocity.normalized : Vector2.up);
+
+        AttachTo(point, normal);
     }
 
     /// <summary>Optional, called right after Launch() by spawners that want this projectile to lay

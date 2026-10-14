@@ -123,6 +123,12 @@ public class SO_SurfaceProjectileData : ScriptableObject
              "the prefab (CTRL_SurfaceProjectile auto-finds one on its own GameObject if not wired " +
              "up explicitly). Leave empty to skip sprite-swapping entirely.")]
     public Sprite[] spriteFrames;
+    [Tooltip("Multiplies the projectile's own 2D Point Light intensity (whatever it's set to on the " +
+             "prefab — registered once at spawn) over the course of the projectile's whole life. X " +
+             "axis is 0-1 progress through Lifetime Seconds; Y is the multiplier (1 = starting " +
+             "intensity, 0 = dark). Default eases 1 to 0, dimming out as the projectile dies. No " +
+             "effect if CTRL_SurfaceProjectile has no Light2D to drive.")]
+    public AnimationCurve lightIntensityCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 
     [Header("Fire Trail")]
     [Tooltip("Lay a fire trail behind it while crawling along a surface. Only works when whatever " +

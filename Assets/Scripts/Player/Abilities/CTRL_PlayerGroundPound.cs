@@ -28,9 +28,9 @@ using UnityEngine;
 /// Both the first contact and the immediate check are themselves checked against Max Normal
 /// Difference so this can't fire on a wall, ceiling, or steep incline.
 ///
-/// The pause-timer auto-return to Platformer is a plain Update() countdown, not a coroutine — same
-/// reasoning as CTRL_PlayerSlingImpact: nothing here should depend on a coroutine surviving
-/// something else stopping it mid-flight.
+/// The pause-timer auto-return to Platformer is a plain Update() check against a Time.time
+/// deadline, not a coroutine — same reasoning as CTRL_PlayerSlingImpact: nothing here should
+/// depend on a coroutine surviving something else stopping it mid-flight.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CTRL_PlayerGroundPound : MonoBehaviour
@@ -56,8 +56,18 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
     // spawn from THIS, never from transform.position (the player's current position), which can be
     // mid-air by the time Execute() runs if the buffer window is what let it through.
     private Vector2 _lastContactPoint;
+    // The surface normal at _lastContactPoint — needed so SnapPlayerToImpact() and
+    // SpawnGroundProjectile() can offset along the actual slope instead of assuming flat ground
+    // (world Vector2.up). Defaults to Vector2.up so a never-set value still behaves like the old
+    // flat-ground-only code.
+    private Vector2 _lastContactNormal = Vector2.up;
     private bool _pauseActive;
-    private float _pauseTimer;
+    // A deadline (Time.time to count up to), not a countdown — same style the rest of this file
+    // already uses for _lastValidContactTime/groundPoundBuffer. A per-frame Time.deltaTime
+    // subtraction drifts slightly on a variable/low frame rate (common on mobile), since it
+    // compounds rounding error over however many Update() calls the pause lasts; comparing against
+    // a single Time.time deadline set once doesn't.
+    private float _pauseEndTime;
 
     private void Awake()
     {
@@ -69,16 +79,14 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
     {
         if (!_pauseActive) return;
 
-        _pauseTimer -= Time.deltaTime;
-        if (_pauseTimer <= 0f)
-        {
-            _pauseActive = false;
-            // Only hand control back if we're still the one holding it — something else (damage,
-            // death) may have already moved the player out of GroundPound while we were counting
-            // down, and this must never yank them back out of whatever that state is.
-            if (_playerCtrl != null && _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.GroundPound)
-                _playerCtrl.setStatePlatform();
-        }
+        if (Time.time < _pauseEndTime) return;
+
+        _pauseActive = false;
+        // Only hand control back if we're still the one holding it — something else (damage,
+        // death) may have already moved the player out of GroundPound while we were counting
+        // down, and this must never yank them back out of whatever that state is.
+        if (_playerCtrl != null && _playerCtrl.PlayerState == CTRL_PlayerPlatformer.playerControlState.GroundPound)
+            _playerCtrl.setStatePlatform();
     }
 
     /// <summary>Called by INPT_TouchManager.ExecuteSling() the instant a big flick actually
@@ -118,6 +126,7 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
         // is closest to world-up (smallest difference) rather than just the first.
         float bestDifference = float.PositiveInfinity;
         Vector2 bestPoint = collision.GetContact(0).point;
+        Vector2 bestNormal = collision.GetContact(0).normal;
         for (int i = 0; i < collision.contactCount; i++)
         {
             ContactPoint2D contact = collision.GetContact(i);
@@ -126,6 +135,7 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
             {
                 bestDifference = diff;
                 bestPoint = contact.point;
+                bestNormal = contact.normal;
             }
         }
 
@@ -138,6 +148,7 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
         {
             _lastValidContactTime = Time.time;
             _lastContactPoint = bestPoint;
+            _lastContactNormal = bestNormal;
         }
 
         // TEMP DIAGNOSTIC — remove once ground pound is confirmed working.
@@ -198,7 +209,10 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
         float diff = NormalDifference(hit.normal, Vector2.up);
         bool qualifies = diff <= _data.maxNormalDifference;
         if (qualifies)
+        {
             _lastContactPoint = hit.point;
+            _lastContactNormal = hit.normal;
+        }
         Debug.Log($"[GroundPound] IsGroundQualifyingRightNow() groundNormalDifference={diff:F3} " +
                   $"maxAllowed={_data.maxNormalDifference:F3} qualifies={qualifies}", this);
         return qualifies;
@@ -207,6 +221,7 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
     private void Execute()
     {
         _playerCtrl.setStateGroundPound();
+        SnapPlayerToImpact();
 
         // The animation trigger and the ground projectiles fire back to back, right here, in the
         // same method call — there is no other code path that fires either one of these. If the
@@ -223,7 +238,20 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
 
         _currentSlingEligible = false;   // consumed — the next ground pound needs its own fresh sling launch
         _pauseActive = true;
-        _pauseTimer = _data.groundPoundPauseTime;
+        _pauseEndTime = Time.time + _data.groundPoundPauseTime;
+    }
+
+    /// <summary>Snaps the player to rest directly on the registered impact point and zeroes
+    /// velocity, so a ground pound always lands visually right where its shockwave/projectiles
+    /// spawn from — even when it fired off the buffer window, during which normal physics (a
+    /// bounce, a slide) may have already carried the player away from that exact point by the time
+    /// the tap was processed. Offsets along the actual contact normal, not world Vector2.up, so this
+    /// rests correctly on a slope too, not just flat ground.</summary>
+    private void SnapPlayerToImpact()
+    {
+        float halfHeight = _playerCtrl.playerCollider != null ? _playerCtrl.playerCollider.size.y * 0.5f : 0f;
+        _playerCtrl.rb.position = _lastContactPoint + _lastContactNormal * halfHeight;
+        _playerCtrl.rb.linearVelocity = Vector2.zero;
     }
 
     /// <summary>Spawns both ground projectiles. Called from Execute() by default; wire this to an
@@ -246,14 +274,22 @@ public class CTRL_PlayerGroundPound : MonoBehaviour
 
         // Spawn at the actual registered impact point, not transform.position (the player's current
         // position — can be mid-air by now if the buffer window is what let this through). Offset
-        // up (clearance) so it's not embedded in the ground collider, and sideways in its own launch
-        // direction (offset) so it's not spawning overlapping the player's own collider — that
-        // overlap was exactly what was destroying these on their first physics step: the player
-        // isn't tagged DamagePlayer/Enemy or on the projectile's ground mask, so
+        // along the actual contact normal (clearance) so it's not embedded in the ground collider,
+        // and along the contact's own tangent (offset) so it's not spawning overlapping the player's
+        // own collider — that overlap was exactly what was destroying these on their first physics
+        // step: the player isn't tagged DamagePlayer/Enemy or on the projectile's ground mask, so
         // CTRL_SurfaceProjectile.OnTriggerEnter2D was treating the player as "hit something, die."
+        // Using world Vector2.up/direction here instead of the slope-relative normal/tangent only
+        // works on flat ground — on a slope the up-slope side's spawn point ends up computed below
+        // the real (rising) surface, landing embedded in it instead of resting just above it, which
+        // is why only the down-slope projectile was ever visibly crawling.
+        Vector2 tangent = new Vector2(-_lastContactNormal.y, _lastContactNormal.x);
+        if (Vector2.Dot(tangent, direction) < 0f)
+            tangent = -tangent;
+
         Vector2 spawnPos = _lastContactPoint
-            + Vector2.up * _data.projectileSpawnClearance
-            + direction * _data.projectileSpawnOffset;
+            + _lastContactNormal * _data.projectileSpawnClearance
+            + tangent * _data.projectileSpawnOffset;
 
         GameObject proj = Instantiate(_data.surfaceProjectilePrefab, spawnPos, Quaternion.identity);
         IThrownProjectile thrown = proj.GetComponent<IThrownProjectile>();

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ea48caeb0ba9c64381dd4c06d821b8e, type: 3}
   m_Name: EA_GroundProjectileData
   m_EditorClassIdentifier: 
-  speed: 14
+  speed: 6
   damage: 1
-  lifetimeSeconds: 0.35
+  lifetimeSeconds: 0.5
   groundMask:
     serializedVersion: 2
     m_Bits: 8
@@ -24,7 +24,7 @@ MonoBehaviour:
     minAngle: 0
     maxAngle: 45
   wallSupport:
-    enabled: 1
+    enabled: 0
     minAngle: 45
     maxAngle: 135
   ceilingSupport:
@@ -37,7 +37,7 @@ MonoBehaviour:
   maxTransitionAngleDelta: 110
   rotationSmoothSpeed: 540
   orientationOffsetDegrees: -90
-  detachBehavior: 1
+  detachBehavior: 0
   velocityCurve:
     serializedVersion: 2
     m_Curve:
@@ -53,11 +53,11 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 0
-      inSlope: 0
-      outSlope: 0
+      inSlope: -0.51972574
+      outSlope: -0.51972574
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.023416936
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
@@ -75,13 +75,22 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
-      value: 0.1
-      inSlope: -0.28394035
-      outSlope: -0.28394035
+      time: 0.5238919
+      value: 0.70330477
+      inSlope: -1.277813
+      outSlope: -1.277813
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0.18999994
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0.1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
@@ -98,6 +107,15 @@ MonoBehaviour:
       weightedMode: 0
       inWeight: 0
       outWeight: 0
+    - serializedVersion: 3
+      time: 0.3624964
+      value: 0.6864147
+      inSlope: 1.6943678
+      outSlope: 1.6943678
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.020097274
     - serializedVersion: 3
       time: 1
       value: 1
@@ -118,6 +136,30 @@ MonoBehaviour:
   - {fileID: -1472144011, guid: d0c7e52a0938c7e4cb3bc57a247e4409, type: 3}
   - {fileID: 294802705, guid: d0c7e52a0938c7e4cb3bc57a247e4409, type: 3}
   - {fileID: 268185397, guid: d0c7e52a0938c7e4cb3bc57a247e4409, type: 3}
+  lightIntensityCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   leaveFireTrail: 1
   fireTrailMask:
     serializedVersion: 2

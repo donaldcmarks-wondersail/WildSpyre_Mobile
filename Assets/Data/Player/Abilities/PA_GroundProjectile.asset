@@ -19,7 +19,7 @@ MonoBehaviour:
   ignoreKnockbackDuration: 1
   ignoreInterrupt: 0
   ignoreInterruptDuration: 1
-  useAnticipation: 1
+  useAnticipation: 0
   anticipationDistance: 0
   anticipationDuration: 0.5
   anticipationCurveX:
